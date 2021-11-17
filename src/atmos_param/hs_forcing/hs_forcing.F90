@@ -553,7 +553,7 @@ endwhere
 
 end subroutine tstd_summer
 
-#######################################################################
+!#######################################################################
 
  subroutine tstd_winter( t_tp, vtx_gamma, z_vortex, z_km, teq_winter )
 
@@ -599,7 +599,7 @@ real, intent(in),  dimension(:,:,:), optional :: mask
           real, dimension(size(t,1),size(t,2)) :: &
      sin_lat, cos_lat, sin_lat_2, cos_lat_2, t_star, cos_lat_4, &
      tstr, sigma, the, tfactr, rps, p_norm, sin_sublon_2, coszen, fracday, &
-     w_vtx, t_hs, z_vortex, z_km, t_pk, t_summer, t_winter
+     w_vtx, t_hs, z_vortex, z_offset, z_km, t_pk, t_summer, t_winter
 
        real, dimension(size(t,1),size(t,2),size(t,3)) :: tdamp
        real, dimension(size(t,2),size(t,3)) :: tz
@@ -631,7 +631,7 @@ real, intent(in),  dimension(:,:,:), optional :: mask
 
       w_vtx = 0.0 ! Standard atmosphere everywhere if strat_vtx = false
       if (strat_vtx) then
-	 w_vtx = 0.5 * (1.0 + tanh((lat - abs(vtx_egde_r)) / vtx_width_r) ! Eqn A2 in P-K: 1 + tanh(lat - +ve) puts vortex in the NH
+	 w_vtx = 0.5 * (1.0 + tanh((lat - abs(vtx_egde_r)) / vtx_width_r)) ! Eqn A2 in P-K: 1 + tanh(lat - +ve) puts vortex in the NH
       endif
 
       if (trim(equilibrium_t_option) == 'Polvani_Kushner') then
