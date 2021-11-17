@@ -102,6 +102,13 @@ private
    real :: ml_depth=1               ! depth for heat capacity calculation
    real :: spinup_time=10800.     ! number of days to spin up heat capacity for - req. multiple of orbital_period
 
+   real :: vtx_edge = 50.0, vtx_width = 10.0, vtx_gamma = 2.0, t_min = 100.0 ! Parameters for equilibrium_t_option='Polvani_Kushner': vortex location/size (deg), lapse rate and min T
+   real :: z_ozone = 20.0 ! Height of stratospheric warming start (km)
+   Logical :: strat_vtx = .true. ! i.e. default is to have a stratospheric vortex
+
+   Logical :: sponge_flag = .false. ! flag for sponge layer at the top
+   real :: sponge_pbottom = 5.e1 ! Bottom of sponge layer with zero damping (Pa)
+   Real :: sponge_tau_days = 0.5 ! Sponge damping time scale (days)
 
 !-----------------------------------------------------------------------
 
@@ -115,7 +122,9 @@ private
                               u_wind_file, v_wind_file, equilibrium_t_option,&
                               equilibrium_t_file, p_trop, alpha, peri_time, smaxis, albedo, &
                               lapse, h_a, tau_s, orbital_period,         &
-                              heat_capacity, ml_depth, spinup_time, stratosphere_t_option, P00
+                              heat_capacity, ml_depth, spinup_time, stratosphere_t_option, P00, &
+                              vtx_edge, vtx_width, vtx_gamma, t_min, z_ozone, strat_vtx, &
+                              sponge_flag, sponge_pbottom, sponge_tau_days
 
 !-----------------------------------------------------------------------
 
@@ -189,7 +198,7 @@ contains
 !-----------------------------------------------------------------------
 !     rayleigh damping of wind components near the surface
 
-      call rayleigh_damping ( Time, ps, p_full, p_half, u, v, utnd, vtnd, mask=mask )
+      call rayleigh_damping ( Time, ps, p_full, p_half, u, v, utnd, vtnd, zfull, lat, mask=mask )
 
       if (do_conserve_energy) then
          ttnd = -((um+.5*utnd*dt)*utnd + (vm+.5*vtnd*dt)*vtnd)/CP_AIR
@@ -220,7 +229,7 @@ contains
       if (trim(equilibrium_t_option) == 'top_down') then
          call top_down_newtonian_damping(Time, lat, ps, p_full, p_half, t, ttnd, teq, dt, h_trop, zfull, mask )
       else
-         call newtonian_damping ( Time, lat, lon, ps, p_full, p_half, t, ttnd, teq, mask )
+         call newtonian_damping ( Time, lat, lon, ps, p_full, p_half, t, ttnd, teq, zfull, mask )
       endif
       tdt = tdt + ttnd
 !      if (id_newtonian_damping > 0) used = send_data(id_newtonian_damping, ttnd, Time, is, js)
@@ -501,7 +510,76 @@ contains
 
 !#######################################################################
 
- subroutine newtonian_damping ( Time, lat, lon, ps, p_full, p_half, t, tdt, teq, mask )
+ subroutine tstd_summer( t_tp, z_offset, z_km, teq_summer )
+
+!-----------------------------------------------------------------------
+!
+!       Routine for calculating teq_summer for Polvani_Kushner
+!       Uses US standard atmosphere directly from lapse rate formula
+!       Plus minor adjustment, with 2.8K/km warming 
+!
+!-----------------------------------------------------------------------
+
+real, intent(in) :: t_tp
+real, intent(in), dimension(:,:) :: z_offset, z_km
+real, intent(out), dimension(:,:) :: teq_summer
+real, dimension(size(z_km,1),size(z_km,2)) :: z_coord
+real :: t_1, t_sp, t_2
+real :: z_extra
+
+z_coord = z_km - z_offset ! Adds an offset to RHS of below comparisons
+z_extra = (216.65 - t_tp) / 2.8 ! If t_tp < US std T then offset height in equations below where 216.65K corresponds to 0 lapse rate at 11km altitude
+
+! See: https://en.wikipedia.org/wiki/Barometric_formula#Source_code for variation of lapse rate by altitude
+! Lowest and highest legs truncated - i.e. no tropospheric or mesospheric lapse rates 
+
+t_1 = t_tp + 1.0 * (32.0 - 20.0) ! Start of +2.8K/km lapse rate
+t_sp = t_1 + 2.8 * (47.0 - 32.0 + z_extra) ! Stratopause T
+t_2 = t_sp - 2.8 * (71.0 - 51.0) ! End of -2.8K/km lapse rate
+
+where (z_coord <= 20)
+  teq_summer = t_tp
+elsewhere (z_coord <= 32) ! 1K/km lapse rate for 12km
+  teq_summer = t_tp + 1.0 * (z_coord - 20)
+elsewhere (z_coord <= 47 + z_extra)
+  teq_summer = t_1 + 2.8 * (z_coord - 32)
+elsewhere (z_coord <= 51 + z_extra)
+  teq_summer = t_sp
+elsewhere (z_coord <= 71 + z_extra)
+  teq_summer = t_sp - 2.8 * (z_coord - (51 + z_extra))
+elsewhere
+  teq_summer = t_2 - 2.0 * (z_coord - (71 + z_extra))
+endwhere
+
+end subroutine tstd_summer
+
+#######################################################################
+
+ subroutine tstd_winter( t_tp, vtx_gamma, z_vortex, z_km, teq_winter )
+
+!-----------------------------------------------------------------------
+!
+!       Routine for calculating teq_winter for Polvani_Kushner 
+!       i.e. polar vortex adaptation
+!       Original stratopause T preserved by extending a 2.8K/km lapse rate to reach such T
+!
+!-----------------------------------------------------------------------
+
+real, intent(in) :: t_tp, vtx_gamma
+real, intent(in), dimension(:,:) :: z_vortex, z_km
+real, intent(out), dimension(:,:) :: teq_winter
+
+where (z_km <= z_vortex)
+   teq_winter = t_tp
+elsewhere
+   teq_winter = t_tp - vtx_gamma * (z_km - z_vortex) ! Eqn from P-K
+endwhere
+
+end subroutine tstd_winter
+
+!#######################################################################
+
+ subroutine newtonian_damping ( Time, lat, lon, ps, p_full, p_half, t, tdt, teq, zfull, mask )
 
 !-----------------------------------------------------------------------
 !
@@ -512,7 +590,7 @@ contains
 
 type(time_type), intent(in)         :: Time
 real, intent(in),  dimension(:,:)   :: lat, ps, lon
-real, intent(in),  dimension(:,:,:) :: p_full, t, p_half
+real, intent(in),  dimension(:,:,:) :: p_full, t, p_half, zfull
 real, intent(out), dimension(:,:,:) :: tdt, teq
 real, intent(in),  dimension(:,:,:), optional :: mask
 
@@ -520,11 +598,14 @@ real, intent(in),  dimension(:,:,:), optional :: mask
 
           real, dimension(size(t,1),size(t,2)) :: &
      sin_lat, cos_lat, sin_lat_2, cos_lat_2, t_star, cos_lat_4, &
-     tstr, sigma, the, tfactr, rps, p_norm, sin_sublon_2, coszen, fracday
+     tstr, sigma, the, tfactr, rps, p_norm, sin_sublon_2, coszen, fracday, &
+     w_vtx, t_hs, z_vortex, z_km, t_pk, t_summer, t_winter
 
        real, dimension(size(t,1),size(t,2),size(t,3)) :: tdamp
        real, dimension(size(t,2),size(t,3)) :: tz
        real :: rrsun
+
+       real :: vtx_edge_r, vtx_width_r ! Vortex location/size (rad)
 
        integer :: k, i, j
        real    :: tcoeff, pref
@@ -540,6 +621,23 @@ real, intent(in),  dimension(:,:,:), optional :: mask
 
       t_star(:,:) = t_zero - delh*sin_lat_2(:,:) - eps*sin_lat(:,:)
       tstr  (:,:) = t_strat - eps*sin_lat(:,:)
+
+      vtx_edge_r = vtx_edge * pi / 180.0 ! Convert vortex location deg > rad
+      vtx_width_r = vtx_width * pi / 180.0 ! Convert vortex size deg > rad
+
+
+!-----------------------------------------------------------------------
+! Vortex weighting for equilibrium_t_option='Polvani_Kushner'
+
+      w_vtx = 0.0 ! Standard atmosphere everywhere if strat_vtx = false
+      if (strat_vtx) then
+	 w_vtx = 0.5 * (1.0 + tanh((lat - abs(vtx_egde_r)) / vtx_width_r) ! Eqn A2 in P-K: 1 + tanh(lat - +ve) puts vortex in the NH
+      endif
+
+      if (trim(equilibrium_t_option) == 'Polvani_Kushner') then
+	 z_vortex = z_ozone ! Height of stratospheric vortex set to be (arbitrary) height of stratospheric warming start
+	 z_offset = (z_ozone - 20.0) ! TBC
+      endif
 
 !-----------------------------------------------------------------------
       if(trim(equilibrium_t_option) == 'from_file') then
@@ -577,6 +675,21 @@ real, intent(in),  dimension(:,:,:), optional :: mask
          p_norm(:,:) = p_full(:,:,k)/p_trop
          teq(:,:,k) = t_star(:,:)*cos_lat(:,:)*(p_norm(:,:))**alpha
          teq(:,:,k) = max( teq(:,:,k), t_strat )
+
+      else if(trim(equilibrium_t_option) == 'Polvani_Kushner') then
+         p_norm(:,:) = p_full(:,:,k)/pref ! Same as H-S
+         the   (:,:) = t_star(:,:) - delv*cos_lat_2(:,:)*log(p_norm(:,:)) ! Same as H-S 
+         t_hs(:,:) = the(:,:)*(p_norm(:,:))**KAPPA ! Eqn A3 in P-K : renamed Teq for H-S for troposphere
+         z_km(:,:) = zfull(:,:,k)/1000. ! Convert m > km
+         call tstd_summer( t_strat, z_offset, z_km, t_summer )
+         call tstd_winter( t_strat, vtx_gamma, z_vortex, z_km, t_winter )
+         t_pk = ((1.0 - w_vtx) * t_summer) + (w_vtx * t_winter) ! Eqn A1 in P-K
+         where (z_km >= z_vortex)
+	    teq(:,:,k) = max( t_pk, t_min ) ! t_min used to prevent reaching unphysically low T above vortex level
+         elsewhere
+	    teq(:,:,k) = max( t_hs, t_strat ) ! Uses H-S form below altitude of the vortex
+         endwhere
+
       else
          call error_mesg ('hs_forcing_nml', &
          '"'//trim(equilibrium_t_option)//'"  is not a valid value for equilibrium_t_option',FATAL)
@@ -608,7 +721,7 @@ real, intent(in),  dimension(:,:,:), optional :: mask
 
 !#######################################################################
 
- subroutine rayleigh_damping ( Time, ps, p_full, p_half, u, v, udt, vdt, mask )
+ subroutine rayleigh_damping ( Time, ps, p_full, p_half, u, v, udt, vdt, zfull, lat, mask )
 
 !-----------------------------------------------------------------------
 !
@@ -617,8 +730,8 @@ real, intent(in),  dimension(:,:,:), optional :: mask
 !-----------------------------------------------------------------------
 
 type(time_type), intent(in)         :: Time
-real, intent(in),  dimension(:,:)   :: ps
-real, intent(in),  dimension(:,:,:) :: p_full, p_half, u, v
+real, intent(in),  dimension(:,:)   :: ps, lat
+real, intent(in),  dimension(:,:,:) :: p_full, p_half, u, v, zfull
 real, intent(out), dimension(:,:,:) :: udt, vdt
 real, intent(in),  dimension(:,:,:), optional :: mask
 
@@ -630,6 +743,7 @@ integer :: i,j,k
 real    :: vcoeff
 real, dimension(size(u,2),size(u,3)) :: uz, vz
 real :: umean, vmean
+real :: sponge_coeff ! Used if sponge_flag = true for Polvani_Kushner
 
 !-----------------------------------------------------------------------
 !----------------compute damping----------------------------------------
@@ -661,6 +775,15 @@ real :: umean, vmean
             udt(:,:,k) = 0.0
             vdt(:,:,k) = 0.0
          endwhere
+
+      if (sponge_flag) then
+         sponge_coeff = 1./sponge_tau_days/86400. ! TBC with convert per day > per seconds
+         where(p_full(:,:,k) < sponge_pbottom)
+            vfactr(:,:) = -sponge_coeff * ((sponge_pbottom - p_full(:,:,k))/sponge_pbottom)**2 
+            udt(:,:,k) = udt(:,:,k) + vfactr(:,:)*u(:,:,k)
+            vdt(:,:,k) = vdt(:,:,k) + vfactr(:,:)*v(:,:,k)
+         endwhere
+      endif
 
       endif
       enddo
