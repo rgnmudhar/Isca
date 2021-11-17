@@ -1,5 +1,5 @@
 import numpy as np
-
+import os
 from isca import DryCodeBase, DiagTable, Experiment, Namelist, GFDL_BASE
 
 NCORES = 16
@@ -23,8 +23,10 @@ cb.compile()  # compile the source code to working directory $GFDL_WORK/codebase
 # create an Experiment object to handle the configuration of model parameters
 # and output diagnostics
 
-exp_name = 'Polvani_Kushner' # updated experiment name
+exp_name = 'Polvani_Kushner_topo' # updated experiment name
 exp = Experiment(exp_name, codebase=cb)
+
+exp.inputfiles = [os.path.join(GFDL_BASE,'input/land_masks/era_land_t42.nc')]
 
 #Tell model how to write diagnostics
 diag = DiagTable()
@@ -61,7 +63,7 @@ namelist = Namelist({
 
     'spectral_dynamics_nml': {
         'damping_order'           : 4,                      # default: 2
-        'water_correction_limit'  : 200.e2,                 # default: 0 - NOTE: needs to be commented out???
+        #'water_correction_limit'  : 200.e2,                 # default: 0 - NOTE: needs to be commented out???
         'do_water_correction': False,                       # NOTE: added but is it necessary for P-K???
         'reference_sea_level_press': 1.0e5,                  # default: 101325
         'valid_range_t'           : [50., 800.],           # default: (100, 500) - NOTE: was changed to go from 50
@@ -70,6 +72,11 @@ namelist = Namelist({
         'scale_heights': 11.0,                               # NOTE: was changed to be 11.0 from 6.0
         'exponent': 3.0,                                    # NOTE: was changed to be 3.0 from 7.5
         'surf_res': 0.5
+    },
+
+    'spectral_init_cond_nml': { # namelist required for topography added
+        'topog_file_name': 'era_land_t42.nc', #input file name
+        'topography_option': 'input' # take topography from input file
     },
 
     # configure the relaxation profile
