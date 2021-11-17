@@ -23,7 +23,7 @@ cb.compile()  # compile the source code to working directory $GFDL_WORK/codebase
 # create an Experiment object to handle the configuration of model parameters
 # and output diagnostics
 
-exp_name = 'polvani_kushner' # updated experiment name
+exp_name = 'Polvani_Kushner' # updated experiment name
 exp = Experiment(exp_name, codebase=cb)
 
 #Tell model how to write diagnostics
@@ -80,7 +80,7 @@ namelist = Namelist({
         'delv': 10.,       # lapse rate (default 10K)
         'eps': 10.,         # stratospheric latitudinal variation (default 0K) - NOTE: was changed to 10
         'sigma_b': 0.7,    # boundary layer friction height (default p/ps = sigma = 0.7)
-        'equilibrium_t_option': 'polvani_kushner', # add new option for polvani_kushner relaxation
+        'equilibrium_t_option': 'Polvani_Kushner', # add new option for polvani_kushner relaxation
 
         # negative sign is a flag indicating that the units are days
         'ka':   -40.,      # Constant Newtonian cooling timescale (default 40 days)
