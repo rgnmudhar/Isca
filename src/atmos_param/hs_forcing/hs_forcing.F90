@@ -631,7 +631,7 @@ real, intent(in),  dimension(:,:,:), optional :: mask
 
       w_vtx = 0.0 ! Standard atmosphere everywhere if strat_vtx = false
       if (strat_vtx) then
-	 w_vtx = 0.5 * (1.0 + tanh((lat - abs(vtx_egde_r)) / vtx_width_r)) ! Eqn A2 in P-K: 1 + tanh(lat - +ve) puts vortex in the NH
+	 w_vtx = 0.5 * (1.0 + tanh((lat - abs(vtx_edge_r)) / vtx_width_r)) ! Eqn A2 in P-K: 1 + tanh(lat - +ve) puts vortex in the NH
       endif
 
       if (trim(equilibrium_t_option) == 'Polvani_Kushner') then
