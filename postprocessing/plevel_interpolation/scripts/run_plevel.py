@@ -7,11 +7,11 @@ import pdb
 import subprocess
 
 start_time=time.time()
-base_dir='/scratch/sit204/Data_2013/'
-exp_name_list = ['no_ice_flux_lhe_exps_q_flux_hadgem_anoms_3']
+base_dir='$GFDL_DATA' # changed base directory
+exp_name_list = ['Polvani_Kushner_2.0'] # changed experiment name
 avg_or_daily_list=['monthly']
-start_file=287
-end_file=288
+start_file=1 # changed start and end no. of files
+end_file=13
 nfiles=(end_file-start_file)+1
 
 do_extra_averaging=False #If true, then 6hourly data is averaged into daily data using cdo
