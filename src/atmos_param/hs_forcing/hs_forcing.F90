@@ -88,7 +88,12 @@ private
    real :: local_heating_xcenter=180.            ! degrees longitude  Used only when local_heating_option='Isidoro'
    real :: local_heating_ycenter=45.             ! degrees latitude   Used only when local_heating_option='Isidoro'
    real :: local_heating_vert_decay=1.e4         ! pascals            Used only when local_heating_option='Isidoro'
-
+   real :: polar_heating_srfamp=0.0              ! Degrees per day.   Used only when polar_heating_option='true'
+   real :: polar_heating_latwidth=0.0            ! degrees latitude   Used only when polar_heating_option='true'
+   real :: polar_heating_latcenter=0.0           ! degrees latitude   Used only when polar_heating_option='true'
+   real :: polar_heating_sigwidth=0.0            ! sigma height       Used only when polar_heating_option='true'
+   real :: polar_heating_sigcenter=0.0           ! sigma height       Used only when polar_heating_option='true'
+   
    logical :: relax_to_specified_wind = .false.
    character(len=256) :: u_wind_file='u', v_wind_file='v' ! Name of files relative to $work/INPUT  Used only when relax_to_specified_wind=.true.
 
@@ -124,7 +129,10 @@ private
                               lapse, h_a, tau_s, orbital_period,         &
                               heat_capacity, ml_depth, spinup_time, stratosphere_t_option, P00, &
                               vtx_edge, vtx_width, vtx_gamma, t_min, z_ozone, strat_vtx, &
-                              sponge_flag, sponge_pbottom, sponge_tau_days
+                              sponge_flag, sponge_pbottom, sponge_tau_days, &
+                              polar_heating_srfamp, polar_heating_latwidth, polar_heating_latcenter, &
+                              polar_heating_sigwidth, polar_heating_sigcenter
+
 
 !-----------------------------------------------------------------------
 
@@ -138,8 +146,8 @@ private
 
    integer :: id_teq, id_h_trop, id_tdt, id_udt, id_vdt, id_tdt_diss, id_diss_heat, id_local_heating, id_newtonian_damping
    real    :: missing_value = -1.e10
-   real    :: xwidth, ywidth, xcenter, ycenter ! namelist values converted from degrees to radians
-   real    :: srfamp ! local_heating_srfamp converted from deg/day to deg/sec
+   real    :: xwidth, ywidth, xcenter, ycenter, latwidth, latcenter ! namelist values converted from degrees to radians
+   real    :: srfamp, polar_srfamp ! local_heating_srfamp converted from deg/day to deg/sec
    character(len=14) :: mod_name = 'hs_forcing'
 
    logical :: module_is_initialized = .false.
@@ -379,6 +387,8 @@ contains
       ywidth  = local_heating_ywidth*PI/180.
       xcenter = local_heating_xcenter*PI/180.
       ycenter = local_heating_ycenter*PI/180.
+      latwidth  = polar_heating_latwidth*PI/180.
+      latcenter = polar_heating_latcenter*PI/180.
 
 !     ----- Make sure xcenter falls in the range zero to 2*PI -----
 
@@ -387,6 +397,8 @@ contains
 !     ----- convert local_heating_srfamp from deg/day to deg/sec ----
 
       srfamp = local_heating_srfamp/SECONDS_PER_DAY
+      polar_srfamp = polar_heating_srfamp/SECONDS_PER_DAY
+
 
 !     ----- compute coefficients -----
 
@@ -854,7 +866,7 @@ real, intent(in),  dimension(:,:,:) :: p_half
 real, intent(out), dimension(:,:,:) :: tdt
 
 integer :: i, j, k
-real :: lon_temp, x_temp, p_factor
+real :: lon_temp, x_temp, p_factor, sig_temp
 real, dimension(size(lon,1),size(lon,2)) :: lon_factor
 real, dimension(size(lat,1),size(lat,2)) :: lat_factor
 real, dimension(size(p_half,1),size(p_half,2),size(p_half,3)) :: p_half2
@@ -880,6 +892,17 @@ else if(trim(local_heating_option) == 'Isidoro') then
        tdt(i,j,k) = srfamp*lon_factor(i,j)*lat_factor(i,j)*p_factor
      enddo
    enddo
+enddo
+else if(trim(local_heating_option) == 'Polar') then
+   do j=1,size(lon,2)
+      do i=1,size(lon,1)
+         lat_factor(i,j) = exp((-1/2)*((lat(i,j)-latcenter)/latwidth)**2)
+         do k=1,size(p_full,3)
+            sig_temp = p_full(i,j,k)/ps(i,j)
+            p_factor = exp((-1/2)*((sig_temp-polar_heating_sigcenter)/polar_heating_sigwidth)**2)
+            tdt(i,j,k) = tdt(i,j,k) + polar_srfamp*lat_factor(i,j)*p_factor
+         enddo
+      enddo
    enddo
 else
   call error_mesg ('hs_forcing_nml','"'//trim(local_heating_option)//'"  is not a valid value for local_heating_option',FATAL)
