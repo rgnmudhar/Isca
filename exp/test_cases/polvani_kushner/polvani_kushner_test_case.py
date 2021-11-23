@@ -23,10 +23,10 @@ cb.compile()  # compile the source code to working directory $GFDL_WORK/codebase
 # create an Experiment object to handle the configuration of model parameters
 # and output diagnostics
 
-exp_name = 'Polvani_Kushner_topo' # updated experiment name
+exp_name = 'Polvani_Kushner_2.0_heat_NP' # updated experiment name
 exp = Experiment(exp_name, codebase=cb)
 
-exp.inputfiles = [os.path.join(GFDL_BASE,'input/land_masks/era_land_t42.nc')]
+#exp.inputfiles = [os.path.join(GFDL_BASE,'input/land_masks/era_land_t42.nc')]
 
 #Tell model how to write diagnostics
 diag = DiagTable()
@@ -34,6 +34,8 @@ diag.add_file('atmos_monthly', 30, 'days', time_units='days')
 
 #Tell model which diagnostics to write
 diag.add_field('dynamics', 'ps', time_avg=True)
+diag.add_field('dynamics', 'zsurf', time_avg=True) # added diagnostic field for plevel_interp
+diag.add_field('dynamics', 'sphum', time_avg=True) # added diagnostic field for plevel_interp
 diag.add_field('dynamics', 'bk')
 diag.add_field('dynamics', 'pk')
 diag.add_field('dynamics', 'ucomp', time_avg=True)
@@ -44,6 +46,7 @@ diag.add_field('dynamics', 'div', time_avg=True)
 diag.add_field('dynamics', 'height', time_avg=True) # added diagnostic field for height
 
 diag.add_field('hs_forcing', 'teq', time_avg=True) # added diagnostic field as sanity check on Teq
+diag.add_field('hs_forcing', 'local_heating', time_avg=True) # added diagnostic field for polar heating check
 
 exp.diag_table = diag
 
@@ -74,10 +77,10 @@ namelist = Namelist({
         'surf_res': 0.5
     },
 
-    'spectral_init_cond_nml': { # namelist required for topography added
-        'topog_file_name': 'era_land_t42.nc', #input file name
-        'topography_option': 'input' # take topography from input file
-    },
+    #'spectral_init_cond_nml': { # namelist required for topography added
+    #    'topog_file_name': 'era_land_t42.nc', #input file name
+    #    'topography_option': 'input' # take topography from input file
+    #},
 
     # configure the relaxation profile
     'hs_forcing_nml': {
@@ -87,6 +90,7 @@ namelist = Namelist({
         'delv': 10.,       # lapse rate (default 10K)
         'eps': 10.,         # stratospheric latitudinal variation (default 0K) - NOTE: was changed to 10
         'sigma_b': 0.7,    # boundary layer friction height (default p/ps = sigma = 0.7)
+        'vtx_gamma': 2.0, # experiment with different values of gamma
         'equilibrium_t_option': 'Polvani_Kushner', # add new option for polvani_kushner relaxation
 
         # negative sign is a flag indicating that the units are days
@@ -95,10 +99,17 @@ namelist = Namelist({
         'kf':   -1.,       # BL momentum frictional timescale (default 1 days)
 
         'z_ozone': 15.,     # added height of stratospheric heating source
-
         'do_conserve_energy':   True,  # convert dissipated momentum into heat (default True)
+        'sponge_flag': True,     # added sponge layer for simple damping in upper levels
 
-        'sponge_flag': True     # added sponge layer for simple damping in upper levels
+        # variables for polar heating
+        'local_heating_option': 'Polar',
+        'polar_heating_srfamp': 4., #X K/day heating
+        'polar_heating_latwidth':   20., # in degrees 
+        'polar_heating_latcenter':   90.,  # in degrees
+        'polar_heating_sigwidth': 0.1,
+        'polar_heating_sigcenter': 0.8
+
     },
 
     'diag_manager_nml': {
