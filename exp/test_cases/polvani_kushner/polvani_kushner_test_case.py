@@ -34,7 +34,7 @@ diag.add_file('atmos_monthly', 30, 'days', time_units='days')
 
 #Tell model which diagnostics to write
 diag.add_field('dynamics', 'ps', time_avg=True)
-diag.add_field('dynamics', 'zsurf', time_avg=True) # added diagnostic field for plevel_interp
+diag.add_field('dynamics', 'zsurf') # added diagnostic field for plevel_interp - zsurf is static so can't get time average
 diag.add_field('dynamics', 'sphum', time_avg=True) # added diagnostic field for plevel_interp
 diag.add_field('dynamics', 'bk')
 diag.add_field('dynamics', 'pk')
@@ -104,11 +104,11 @@ namelist = Namelist({
 
         # variables for polar heating
         'local_heating_option': 'Polar',
-        'polar_heating_srfamp': 4., #X K/day heating
+        'polar_heating_srfamp': 2., #X K/day heating
         'polar_heating_latwidth':   20., # in degrees 
         'polar_heating_latcenter':   90.,  # in degrees
         'polar_heating_sigwidth': 0.1,
-        'polar_heating_sigcenter': 0.8
+        'polar_heating_sigcenter': 1.
 
     },
 
