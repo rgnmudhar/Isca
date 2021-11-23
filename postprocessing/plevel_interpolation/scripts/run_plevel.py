@@ -8,10 +8,10 @@ import subprocess
 
 start_time=time.time()
 base_dir='$GFDL_DATA' # changed base directory
-exp_name_list = ['Polvani_Kushner_2.0'] # changed experiment name
+exp_name_list = ['Polvani_Kushner_2.0_heat_NP'] # changed experiment name
 avg_or_daily_list=['monthly']
 start_file=1 # changed start and end no. of files
-end_file=13
+end_file=12
 nfiles=(end_file-start_file)+1
 
 do_extra_averaging=False #If true, then 6hourly data is averaged into daily data using cdo
@@ -40,7 +40,7 @@ if level_set=='standard':
     plevs['daily']  =' -p "1000 10000 25000 50000 85000 92500"'
     
     var_names['monthly']='-a slp height'
-    var_names['pentad']='-a slp height'    
+    var_names['pentad']='-'-a slp height'    
     var_names['timestep']='-a'
     var_names['6hourly']='ucomp slp height vor t_surf vcomp omega'
     var_names['daily']='ucomp slp height vor t_surf vcomp omega temp'
