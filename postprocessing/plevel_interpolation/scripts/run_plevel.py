@@ -26,20 +26,23 @@ except:
     out_dir = base_dir
 
 plevs={}
+phalfs={}  # added new dictionary
 var_names={}
 
 if level_set=='standard':
 
     plevs['monthly']=' -p "3 16 51 138 324 676 1000 1266 2162 3407 5014 6957 9185 10000 11627 14210 16864 19534 20000 22181 24783 27331 29830 32290 34731 37173 39637 42147 44725 47391 50164 53061 56100 59295 62661 66211 70000 73915 78095 82510 85000 87175 92104 97312"'
-
+    phalfs['monthly']=' -p "0 9 33 94 231 500 838 1133 1714 2784 4210 5985 8071 9592 10813 12918 15537 18199 19767 21090 23482 26057 28580 31060 33510 35952 38405 40892 43436 46058 48777 51612 54580 57697 60978 64436 68105 71957 76005 80302 83755 86087 89639 94708 100000"'  # levels calculated from find_phalf.py
+    
     plevs['timestep']=' -p "3 16 51 138 324 676 1000 1266 2162 3407 5014 6957 9185 10000 11627 14210 16864 19534 20000 22181 24783 27331 29830 32290 34731 37173 39637 42147 44725 47391 50164 53061 56100 59295 62661 66211 70000 73915 78095 82510 85000 87175 92104 97312"'
 
     plevs['pentad']=' -p "3 16 51 138 324 676 1000 1266 2162 3407 5014 6957 9185 10000 11627 14210 16864 19534 20000 22181 24783 27331 29830 32290 34731 37173 39637 42147 44725 47391 50164 53061 56100 59295 62661 66211 70000 73915 78095 82510 85000 87175 92104 97312"'
 
-    plevs['6hourly']=' -p "1000 10000 25000 50000 85000 92500"
+    plevs['6hourly']=' -p "1000 10000 25000 50000 85000 92500"'
     
     # changed below to be same as monthly:
     plevs['daily']=' -p "3 16 51 138 324 676 1000 1266 2162 3407 5014 6957 9185 10000 11627 14210 16864 19534 20000 22181 24783 27331 29830 32290 34731 37173 39637 42147 44725 47391 50164 53061 56100 59295 62661 66211 70000 73915 78095 82510 85000 87175 92104 97312"' 
+    phalfs['daily']=' -p "0 9 33 94 231 500 838 1133 1714 2784 4210 5985 8071 9592 10813 12918 15537 18199 19767 21090 23482 26057 28580 31060 33510 35952 38405 40892 43436 46058 48777 51612 54580 57697 60978 64436 68105 71957 76005 80302 83755 86087 89639 94708 100000"' # levels calculated from find_phalf.py
     #plevs['daily']  =' -p "1000 10000 25000 50000 85000 92500"'
     
     var_names['monthly']='-a slp height'
@@ -84,6 +87,8 @@ for exp_name in exp_name_list:
 
             if not os.path.isfile(nc_file_out):
                 plevel_call(nc_file_in,nc_file_out, var_names = var_names[avg_or_daily], p_levels = plevs[avg_or_daily], mask_below_surface_option=mask_below_surface_set)
+                #how do I get it to output as phalf coordinate?
+                #plevel_call(nc_file_in,nc_file_out, var_names = var_names[avg_or_daily], p_levels = phalfs[avg_or_daily], mask_below_surface_option=mask_below_surface_set)
             if do_extra_averaging and avg_or_daily=='6hourly':
                 nc_file_out_daily = base_dir+'/'+exp_name+'/run'+str(n+start_file)+'/atmos_daily'+file_suffix+'.nc'
                 daily_average(nc_file_out, nc_file_out_daily)
@@ -109,6 +114,5 @@ if group_months_into_one_file:
                 join_files(nc_file_string,nc_file_out)
 
 print('execution time', time.time()-start_time)
-
 
 
