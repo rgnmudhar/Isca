@@ -1,0 +1,204 @@
+# -*- coding: utf-8 -*-s
+import numpy as np
+#from stephen import create_timeseries as cts
+import xarray as xr
+from data_handling_updates import model_constants as mc
+import matplotlib.pyplot as plt
+import sh
+from pylab import rcParams
+
+def hs_default_forcing(t_zero=315., t_strat=200., delh=60., delv=10., eps=0., sigma_b=0.7, pref=1.e5, write_netcdf=True):
+    
+    ozone_file = '/scratch/rg419/Isca/input/rrtm_input_files/ozone_1990_notime.nc'
+    data = xr.open_dataset( ozone_file, decode_times=False)
+    
+    template = data.ozone_1990 * 0. + 1.
+    
+    sin_lat = np.sin(data.lat * np.pi/180.)
+    cos_lat = np.cos(data.lat * np.pi/180.)
+    sin_lat_2 = np.sin(data.lat * np.pi/180.) ** 2.
+    cos_lat_2 = np.cos(data.lat * np.pi/180.) ** 2.
+    
+    t_star = (t_zero - delh*sin_lat_2 - eps*sin_lat) * template
+    
+    tstr = (t_strat - eps*sin_lat) * template
+    
+    p_norm = 100.*data.pfull/pref
+    
+    the = t_star - delv*cos_lat_2 * np.log(p_norm)
+    teq = the * p_norm ** mc.kappa
+    
+    teq = teq.where(teq > tstr, tstr)
+    #teq.mean('lon').plot.contourf(x='lat', y='pfull', yincrease=False, levels=np.arange(200.,316.,5.,))
+    #plt.show()
+    
+    # NB filename should be 32 characters or less
+    
+    coord_list = ["pfull", "lat", "lon"]
+    teq = xr.Dataset(
+         data_vars=dict(
+             teq = (coord_list, teq.transpose('pfull','lat','lon').values)
+         ),
+         coords=data.coords
+    )
+    
+    if write_netcdf:
+        teq.to_netcdf('/disco/share/rg419/ArctiCONNECT_data/teq.nc', format="NETCDF3_CLASSIC",
+             encoding = {"teq": {"dtype": 'float32', '_FillValue': None},
+                        "lat": {'_FillValue': None}, "lon": {'_FillValue': None},
+                        "latb": {'_FillValue': None}, "lonb": {'_FillValue': None},
+                        "pfull": {'_FillValue': None}, "phalf": {'_FillValue': None}}
+                    )
+    
+    return teq
+    
+    
+
+def st_forcing(t_zero=315., t_strat=200., delht=60., delhs=40., delv=10., eps=0., sigma_b=0.7, pref=1.e5, del_p=800., p_th=50., write_netcdf=True):
+    
+    ozone_file = '/scratch/rg419/Isca/input/rrtm_input_files/ozone_1990_notime.nc'
+    data = xr.open_dataset( ozone_file, decode_times=False)
+    
+    template = data.ozone_1990 * 0. + 1.
+    
+    sin_lat = np.sin(data.lat * np.pi/180.)
+    cos_lat = np.cos(data.lat * np.pi/180.)
+    sin_lat_2 = np.sin(data.lat * np.pi/180.) ** 2.
+    cos_lat_2 = np.cos(data.lat * np.pi/180.) ** 2.
+    
+    delh_p = (delht + 0.5 * (delhs - delht) * (1. + np.tanh((data.pfull - del_p)/p_th)))*template
+    delh_p.mean(('lat','lon')).plot()
+    plt.show()
+    
+    t_star = (t_zero - delh_p*sin_lat_2 - eps*sin_lat) * template
+    
+    tstr = (t_strat - eps*sin_lat) * template
+    
+    p_norm = 100.*data.pfull/pref
+    
+    the = t_star - delv*cos_lat_2 * np.log(p_norm)
+    teq = the * p_norm ** mc.kappa
+    
+    teq = teq.where(teq > tstr, tstr)
+    
+    #teq.mean('lon').plot.contourf(x='lat', y='pfull', yincrease=False, levels=np.arange(200.,316.,5.,))
+    #plt.show()
+    
+    
+    coord_list = ["pfull", "lat", "lon"]
+    teq = xr.Dataset(
+         data_vars=dict(
+             teq = (coord_list, teq.transpose('pfull','lat','lon').values)
+         ),
+         coords=data.coords
+    )
+    
+    
+    # NB filename should be 32 characters or less
+    filename = 'dht' + str(delht) + 'dhs' + str(delhs) + 'p' + str(del_p) + 'g' + str(p_th)
+    print(len(filename))
+    #filename='heating_test'
+    teq = teq.rename({"teq" : filename})
+    
+    
+    if write_netcdf:
+        teq.to_netcdf('/disco/share/rg419/ArctiCONNECT_data/'+ filename + '.nc', format="NETCDF3_CLASSIC",
+             encoding = {filename: {"dtype": 'float32', '_FillValue': None},
+                        "lat": {'_FillValue': None}, "lon": {'_FillValue': None},
+                        "latb": {'_FillValue': None}, "lonb": {'_FillValue': None},
+                        "pfull": {'_FillValue': None}, "phalf": {'_FillValue': None}}
+                    )
+    
+    return teq
+    
+    
+
+
+
+def polar_heating(y_wid=15., th_mag=1., del_p = 800., p_th = 50., fix_energy=800., save_output=True):
+    
+    # Parameter sweep
+    # 1. Vary del_p - depth f forcing: 0:200:800 (1000 would be no forcing!)   5
+    # 2. Vary th_mag - magnitude of forcing in K/s when centred on 800hPa  (0.5,1.,1.5,2.) Could try negative values too   4
+    # 3. Vary y_wid - decay of forcing away from pole (10., 15., 20.)     3
+    # 4. Vary p_th - sets vertical gradient of forcing at cap (25.,50.,75.) Sensitivity check that steepness of transition doesn't cause unexpected   3 behaviour
+    
+    ozone_file = '/scratch/rg419/Isca/input/rrtm_input_files/ozone_1990_notime.nc'
+    data = xr.open_dataset( ozone_file, decode_times=False)
+    
+    template = data.ozone_1990 * 0. + 1.
+    
+    # Vary with latitude in similar way to Orlanski and Solman 2010
+    heat_lat = np.exp(-((data.lat - 90.)/y_wid)**2.) + np.exp(-((data.lat + 90.)/y_wid)**2.) * template
+        
+    # fix so that the function has magnitude 1 when del_p = fix_energy, and otherwise scales to give constant net energy input
+    # fix energy can be varied to alter the total input, which I think will be (1000-fix_energy) * cp/g * th_mag
+    
+    if del_p==0.:  # If the heating is going right to the model top then make heating uniform in height, scaled to fit fix_energy level
+        polar_heating = th_mag * (1000. - fix_energy)/1000. * heat_lat /86400.
+    else:
+        polar_heating = th_mag * (1000. - fix_energy)/(1000. - del_p) * heat_lat * 0.5 * (1. + np.tanh((data.pfull - del_p)/p_th)) /86400.
+    
+    coord_list = ["pfull", "lat", "lon"]
+    polar_heating = xr.Dataset(
+         data_vars=dict(
+             polar_heating = (coord_list, polar_heating.transpose('pfull','lat','lon').values)
+         ),
+         coords=data.coords
+    )
+    
+    if save_output:
+        # NB filename should be 32 characters or less
+        filename = 'w' + str(y_wid) + 'a' + str(th_mag) + 'p' + str(del_p) + 'f' + str(fix_energy) + 'g' + str(p_th)
+        print(len(filename))
+        #filename='heating_test'
+        polar_heating = polar_heating.rename({"polar_heating" : filename})
+        
+        polar_heating.to_netcdf('/disco/share/rg419/ArctiCONNECT_data/hs_input/' + filename + '.nc', format="NETCDF3_CLASSIC",
+             encoding = {filename: {"dtype": 'float32', '_FillValue': None},
+                    "lat": {'_FillValue': None}, "lon": {'_FillValue': None},
+                    "latb": {'_FillValue': None}, "lonb": {'_FillValue': None},
+                    "pfull": {'_FillValue': None}, "phalf": {'_FillValue': None}}
+                )
+    
+    return polar_heating
+
+
+
+
+
+
+def plot_polar_heating(th_mag=1., del_ps = [0.,400.,800.]):
+    
+    plot_dir = '/scratch/rg419/plots/ArctiCONNECT/dry_experiments/hs_input_files/'
+    mkdir = sh.mkdir.bake('-p')
+    mkdir(plot_dir)
+    
+    rcParams['figure.figsize'] = 10, 4
+    rcParams['font.size'] = 11
+    
+    fig, ((ax1, ax2, ax3)) = plt.subplots(1, 3, sharey='row')
+    axes = [ax1, ax2, ax3]
+    
+    for i in range(3):
+        polar_ht = polar_heating(th_mag=th_mag, del_p = del_ps[i], save_output=False)
+        polar_ht = polar_ht.polar_heating.isel(lon=0) * 86400.
+        
+        f1 = polar_ht.plot.contourf(x='lat', y='pfull', ax=axes[i], yincrease=False, levels=np.arange(0.,1.1,0.1), add_labels=False, add_colorbar=False)
+        axes[i].set_xlim(0.,90.)
+        axes[i].set_title(str(int(del_ps[i])) + ' hPa')
+        axes[i].set_xlabel('Latitude')
+        
+    ax1.set_ylabel('Pressure, hPa')
+    plt.subplots_adjust(left=0.07, right=0.97, top=0.9, bottom=0.1, hspace=0.3, wspace=0.15)
+    cb1=fig.colorbar(f1, ax=axes, use_gridspec=True, orientation = 'horizontal',fraction=0.1, pad=0.2, aspect=30, shrink=0.5)
+    cb1.set_label('Heating, K/day')
+    
+    filename = 'w' + str(15.) + 'a' + str(th_mag) + 'g' + str(50.)
+    
+    plt.savefig(plot_dir + filename + '.pdf', format='pdf')
+    plt.close()
+    
+    
+    
+plot_polar_heating()
