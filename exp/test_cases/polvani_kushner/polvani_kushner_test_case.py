@@ -23,19 +23,20 @@ cb.compile()  # compile the source code to working directory $GFDL_WORK/codebase
 # create an Experiment object to handle the configuration of model parameters
 # and output diagnostics
 
-exp_name = 'Polvani_Kushner_2.0_heat_NP' # updated experiment name
+exp_name = 'PK_eps0_vtx3_zoz13_7y' # updated experiment name
 exp = Experiment(exp_name, codebase=cb)
 
 #exp.inputfiles = [os.path.join(GFDL_BASE,'input/land_masks/era_land_t42.nc')]
 
 #Tell model how to write diagnostics
 diag = DiagTable()
-diag.add_file('atmos_monthly', 30, 'days', time_units='days')
+diag.add_file('atmos_monthly', 30, 'days', time_units='days') 
+diag.add_file('atmos_daily', 1, 'days', time_units='days') # added output of daily file
 
 #Tell model which diagnostics to write
 diag.add_field('dynamics', 'ps', time_avg=True)
-diag.add_field('dynamics', 'zsurf') # added diagnostic field for plevel_interp - zsurf is static so can't get time average
 diag.add_field('dynamics', 'sphum', time_avg=True) # added diagnostic field for plevel_interp
+diag.add_field('dynamics', 'zsurf') # added diagnostic field for plevel_interp - zsurf is static so can't get time average
 diag.add_field('dynamics', 'bk')
 diag.add_field('dynamics', 'pk')
 diag.add_field('dynamics', 'ucomp', time_avg=True)
@@ -46,7 +47,7 @@ diag.add_field('dynamics', 'div', time_avg=True)
 diag.add_field('dynamics', 'height', time_avg=True) # added diagnostic field for height
 
 diag.add_field('hs_forcing', 'teq', time_avg=True) # added diagnostic field as sanity check on Teq
-diag.add_field('hs_forcing', 'local_heating', time_avg=True) # added diagnostic field for polar heating check
+#diag.add_field('hs_forcing', 'local_heating', time_avg=True) # added diagnostic field for polar heating check
 
 exp.diag_table = diag
 
@@ -54,8 +55,8 @@ exp.diag_table = diag
 # wrapped as a namelist object.
 namelist = Namelist({
     'main_nml': {
-        'dt_atmos': 600,
-        'days': 30,
+        'dt_atmos': 600, # timestep in seconds
+        'days': 30, 
         'calendar': 'thirty_day',
         'current_date': [2000,1,1,0,0,0]
     },
@@ -85,30 +86,32 @@ namelist = Namelist({
     # configure the relaxation profile
     'hs_forcing_nml': {
         't_zero': 315.,    # temperature at reference pressure at equator (default 315K)
-        't_strat': 200.,   # stratosphere temperature (default 200K)
+        't_strat': 216.65,   # stratosphere temperature (default 200K) - NOTE: was changed to 216.65 consistent with US standard T at 20km
         'delh': 60.,       # equator-pole temp gradient (default 60K)
         'delv': 10.,       # lapse rate (default 10K)
-        'eps': 10.,         # stratospheric latitudinal variation (default 0K) - NOTE: was changed to 10
+        'eps': 0.,         # stratospheric latitudinal variation (default 0K) - NOTE: ±10 as per P-K paper
         'sigma_b': 0.7,    # boundary layer friction height (default p/ps = sigma = 0.7)
-        'vtx_gamma': 2.0, # experiment with different values of gamma
+        'vtx_gamma': 3.0, # experiment with different values of gamma
         'equilibrium_t_option': 'Polvani_Kushner', # add new option for polvani_kushner relaxation
+        'strat_vtx': True, # default is True - set to False so that w_vtx=0 for no polar vortex
 
         # negative sign is a flag indicating that the units are days
         'ka':   -40.,      # Constant Newtonian cooling timescale (default 40 days)
         'ks':    -4.,      # Boundary layer dependent cooling timescale (default 4 days)
         'kf':   -1.,       # BL momentum frictional timescale (default 1 days)
 
-        'z_ozone': 15.,     # added height of stratospheric heating source
+        'z_ozone': 13.,     # added height of stratospheric heating source
         'do_conserve_energy':   True,  # convert dissipated momentum into heat (default True)
-        'sponge_flag': True,     # added sponge layer for simple damping in upper levels
+        'sponge_flag': True #,     # added sponge layer for simple damping in upper levels
 
         # variables for polar heating
-        'local_heating_option': 'Polar',
-        'polar_heating_srfamp': 2., #X K/day heating
-        'polar_heating_latwidth':   20., # in degrees 
-        'polar_heating_latcenter':   90.,  # in degrees
-        'polar_heating_sigwidth': 0.1,
-        'polar_heating_sigcenter': 1.
+        #'local_heating_option': 'from_file', # 'Polar',
+        #'local_heating_file': 'w15.0a1.0p800.0f800.0g50.0.nc',
+        #'polar_heating_srfamp': 2., #X K/day heating
+        #'polar_heating_latwidth':   20., # in degrees 
+        #'polar_heating_latcenter':   90.,  # in degrees
+        #'polar_heating_sigwidth': 0.1,
+        #'polar_heating_sigcenter': 1.e3
 
     },
 
@@ -129,9 +132,8 @@ namelist = Namelist({
 exp.namelist = namelist
 exp.set_resolution(*RESOLUTION)
 
-#Lets do a run!
+#Let's do a run!
 if __name__ == '__main__':
     exp.run(1, num_cores=NCORES, use_restart=False)
-    for i in range(2, 13): #~1y worth
+    for i in range(2, 85): #~7y worth
         exp.run(i, num_cores=NCORES)  # use the restart i-1 by default
-
