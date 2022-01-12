@@ -2,14 +2,15 @@
 import numpy as np
 #from stephen import create_timeseries as cts
 import xarray as xr
-from data_handling_updates import model_constants as mc
+#from data_handling_updates import model_constants as mc
 import matplotlib.pyplot as plt
 import sh
 from pylab import rcParams
 
+"""
 def hs_default_forcing(t_zero=315., t_strat=200., delh=60., delv=10., eps=0., sigma_b=0.7, pref=1.e5, write_netcdf=True):
     
-    ozone_file = '/scratch/rg419/Isca/input/rrtm_input_files/ozone_1990_notime.nc'
+    ozone_file = '/Isca/input/rrtm_input_files/ozone_1990_notime.nc'
     data = xr.open_dataset( ozone_file, decode_times=False)
     
     template = data.ozone_1990 * 0. + 1.
@@ -56,7 +57,7 @@ def hs_default_forcing(t_zero=315., t_strat=200., delh=60., delv=10., eps=0., si
 
 def st_forcing(t_zero=315., t_strat=200., delht=60., delhs=40., delv=10., eps=0., sigma_b=0.7, pref=1.e5, del_p=800., p_th=50., write_netcdf=True):
     
-    ozone_file = '/scratch/rg419/Isca/input/rrtm_input_files/ozone_1990_notime.nc'
+    ozone_file = 'Isca/input/rrtm_input_files/ozone_1990_notime.nc'
     data = xr.open_dataset( ozone_file, decode_times=False)
     
     template = data.ozone_1990 * 0. + 1.
@@ -110,7 +111,7 @@ def st_forcing(t_zero=315., t_strat=200., delht=60., delhs=40., delv=10., eps=0.
                     )
     
     return teq
-    
+"""    
     
 
 
@@ -123,13 +124,14 @@ def polar_heating(y_wid=15., th_mag=1., del_p = 800., p_th = 50., fix_energy=800
     # 3. Vary y_wid - decay of forcing away from pole (10., 15., 20.)     3
     # 4. Vary p_th - sets vertical gradient of forcing at cap (25.,50.,75.) Sensitivity check that steepness of transition doesn't cause unexpected   3 behaviour
     
-    ozone_file = '/scratch/rg419/Isca/input/rrtm_input_files/ozone_1990_notime.nc'
+    ozone_file = '/home/links/rm811/Isca/input/rrtm_input_files/ozone_1990_notime.nc'
     data = xr.open_dataset( ozone_file, decode_times=False)
     
     template = data.ozone_1990 * 0. + 1.
     
     # Vary with latitude in similar way to Orlanski and Solman 2010
-    heat_lat = np.exp(-((data.lat - 90.)/y_wid)**2.) + np.exp(-((data.lat + 90.)/y_wid)**2.) * template
+    #heat_lat = np.exp(-((data.lat - 90.)/y_wid)**2.) + np.exp(-((data.lat + 90.)/y_wid)**2.) * template
+    heat_lat = np.exp(-((data.lat - 90.)/y_wid)**2.) * template # for north pole only
         
     # fix so that the function has magnitude 1 when del_p = fix_energy, and otherwise scales to give constant net energy input
     # fix energy can be varied to alter the total input, which I think will be (1000-fix_energy) * cp/g * th_mag
@@ -149,12 +151,12 @@ def polar_heating(y_wid=15., th_mag=1., del_p = 800., p_th = 50., fix_energy=800
     
     if save_output:
         # NB filename should be 32 characters or less
-        filename = 'w' + str(y_wid) + 'a' + str(th_mag) + 'p' + str(del_p) + 'f' + str(fix_energy) + 'g' + str(p_th)
+        filename = 'w' + str(int(y_wid)) + 'a' + str(int(th_mag)) + 'p' + str(int(del_p)) + 'f' + str(int(fix_energy)) + 'g' + str(int(p_th))
         print(len(filename))
         #filename='heating_test'
         polar_heating = polar_heating.rename({"polar_heating" : filename})
         
-        polar_heating.to_netcdf('/disco/share/rg419/ArctiCONNECT_data/hs_input/' + filename + '.nc', format="NETCDF3_CLASSIC",
+        polar_heating.to_netcdf('/home/links/rm811//Isca/exp/test_cases/polvani_kushner/' + filename + '.nc', format="NETCDF3_CLASSIC",
              encoding = {filename: {"dtype": 'float32', '_FillValue': None},
                     "lat": {'_FillValue': None}, "lon": {'_FillValue': None},
                     "latb": {'_FillValue': None}, "lonb": {'_FillValue': None},
@@ -163,11 +165,54 @@ def polar_heating(y_wid=15., th_mag=1., del_p = 800., p_th = 50., fix_energy=800
     
     return polar_heating
 
+def altitude(p):
+    """Finds altitude from pressure using z = -H*log10(p/p0) """
+        
+    z = np.empty_like(p)
+    
+    for i in range(p.shape[0]):
+        z[i] = -H*np.log((p[i])/p0)
+        
+    # Make into an xarray DataArray
+    z_xr = xr.DataArray(z, coords=[z], dims=['pfull'])
+    z_xr.attrs['units'] = 'km'
+    
+    #below is the inverse of the calculation
+    #p[i] = p0*np.exp((-1)*z[i]*(10**3)/((R*T/g)))
+    
+    return z_xr
+
+def plot_polar_heating(th_mag=1., del_ps = [0.,400.,800.]):
+    
+    name = 'w15a1p800f800g50'
+    file = name + '.nc'
+    ds = xr.open_dataset(file)
+
+    lat = ds.coords['lat'].data
+    lon = ds.coords['lon'].data
+    p = ds.coords['pfull'].data
 
 
+    upper_p = ds.coords['pfull'].sel(pfull=1, method='nearest') # in order to cap plots at pressure = 1hPa
+    z = altitude(p)
+    upper_z = -H*np.log(upper_p/p0)
 
+    heat = ds.variables[name]
+    heatz = heat.mean(dim='lon').data   
+    
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    cs = plt.contourf(lat, z, heatz, levels=25, cmap='RdBu_r')
+    plt.xlabel('Latitude')
+    plt.xticks([-90, -45, 0, 45, 90], ['90S', '45S', '0', '45N', '90N'])
+    plt.ylabel('Pseudo-Altitude (km)')
+    plt.ylim(min(z), upper_z) #goes to ~1hPa
+    plt.colorbar()
+    plt.title('Polar Heating (K/s)')
 
-
+    return plt.show()
+    
+"""
 def plot_polar_heating(th_mag=1., del_ps = [0.,400.,800.]):
     
     plot_dir = '/scratch/rg419/plots/ArctiCONNECT/dry_experiments/hs_input_files/'
@@ -201,4 +246,11 @@ def plot_polar_heating(th_mag=1., del_ps = [0.,400.,800.]):
     
     
     
+plot_polar_heating()
+"""
+
+H = 8
+p0 = 1000
+
+#polar_heating()
 plot_polar_heating()
