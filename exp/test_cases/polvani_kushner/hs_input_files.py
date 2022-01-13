@@ -156,14 +156,14 @@ def polar_heating(y_wid=15., th_mag=1., del_p = 800., p_th = 50., fix_energy=800
         #filename='heating_test'
         polar_heating = polar_heating.rename({"polar_heating" : filename})
         
-        polar_heating.to_netcdf('/home/links/rm811//Isca/exp/test_cases/polvani_kushner/' + filename + '.nc', format="NETCDF3_CLASSIC",
+        polar_heating.to_netcdf('/home/links/rm811/Isca/input/polar_heating/' + filename + '.nc', format="NETCDF3_CLASSIC",
              encoding = {filename: {"dtype": 'float32', '_FillValue': None},
                     "lat": {'_FillValue': None}, "lon": {'_FillValue': None},
                     "latb": {'_FillValue': None}, "lonb": {'_FillValue': None},
                     "pfull": {'_FillValue': None}, "phalf": {'_FillValue': None}}
                 )
     
-    return polar_heating
+    return filename
 
 def altitude(p):
     """Finds altitude from pressure using z = -H*log10(p/p0) """
@@ -182,10 +182,10 @@ def altitude(p):
     
     return z_xr
 
-def plot_polar_heating(th_mag=1., del_ps = [0.,400.,800.]):
+def plot_polar_heating(filename):
     
-    name = 'w15a1p800f800g50'
-    file = name + '.nc'
+    name = filename
+    file = '/home/links/rm811/Isca/input/polar_heating/' + name + '.nc'
     ds = xr.open_dataset(file)
 
     lat = ds.coords['lat'].data
@@ -252,5 +252,5 @@ plot_polar_heating()
 H = 8
 p0 = 1000
 
-#polar_heating()
-plot_polar_heating()
+filename = polar_heating()
+plot_polar_heating(filename)
