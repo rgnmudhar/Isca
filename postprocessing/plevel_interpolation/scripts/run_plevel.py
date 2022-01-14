@@ -5,10 +5,11 @@ import os
 import time
 import pdb
 import subprocess
+import xarray as xr # for transferring phalfs
 
 start_time=time.time()
 base_dir='$GFDL_DATA' # changed base directory
-exp_name_list = ['Polvani_Kushner_4.0_eps0_1y'] # changed experiment name
+exp_name_list = ['PK_eps0_vtx2_zoz18_1y_heat_test'] # changed experiment name
 avg_or_daily_list=['daily'] # changed for daily (otherwise 'monthly')
 start_file=1 # changed start and end no. of files
 end_file=12
@@ -26,34 +27,34 @@ except:
     out_dir = base_dir
 
 plevs={}
-phalfs={}  # added new dictionary
 var_names={}
 
 if level_set=='standard':
 
-    plevs['monthly']=' -p "3 16 51 138 324 676 1000 1266 2162 3407 5014 6957 9185 10000 11627 14210 16864 19534 20000 22181 24783 27331 29830 32290 34731 37173 39637 42147 44725 47391 50164 53061 56100 59295 62661 66211 70000 73915 78095 82510 85000 87175 92104 97312"'
-    phalfs['monthly']=' -p "0 9 33 94 231 500 838 1133 1714 2784 4210 5985 8071 9592 10813 12918 15537 18199 19767 21090 23482 26057 28580 31060 33510 35952 38405 40892 43436 46058 48777 51612 54580 57697 60978 64436 68105 71957 76005 80302 83755 86087 89639 94708 100000"'  # levels calculated from find_phalf.py
+    #plevs['monthly']=' -p "3 16 51 138 324 676 1000 1266 2162 3407 5014 6957 9185 10000 11627 14210 16864 19534 20000 22181 24783 27331 29830 32290 34731 37173 39637 42147 44725 47391 50164 53061 56100 59295 62661 66211 70000 73915 78095 82510 85000 87175 92104 97312"'
+    # Set plevels to be same as pfull from Isca output (for 40 levels) for use in EOF analysis, calculated using find_phalf.py script
+    plevs['monthly']=' -p "1 3 6 10 16 25 39 60 90 133 192 273 384 532 726 978 1301 1710 2223 2856 3633 4573 5703 7049 8638 10501 12672 15186 18082 21403 25198 29521 34436 40014 46340 53516 61661 70918 81460 93499"'
     
+
     plevs['timestep']=' -p "3 16 51 138 324 676 1000 1266 2162 3407 5014 6957 9185 10000 11627 14210 16864 19534 20000 22181 24783 27331 29830 32290 34731 37173 39637 42147 44725 47391 50164 53061 56100 59295 62661 66211 70000 73915 78095 82510 85000 87175 92104 97312"'
 
     plevs['pentad']=' -p "3 16 51 138 324 676 1000 1266 2162 3407 5014 6957 9185 10000 11627 14210 16864 19534 20000 22181 24783 27331 29830 32290 34731 37173 39637 42147 44725 47391 50164 53061 56100 59295 62661 66211 70000 73915 78095 82510 85000 87175 92104 97312"'
 
     plevs['6hourly']=' -p "1000 10000 25000 50000 85000 92500"'
     
-    # changed below to be same as monthly:
-    plevs['daily']=' -p "3 16 51 138 324 676 1000 1266 2162 3407 5014 6957 9185 10000 11627 14210 16864 19534 20000 22181 24783 27331 29830 32290 34731 37173 39637 42147 44725 47391 50164 53061 56100 59295 62661 66211 70000 73915 78095 82510 85000 87175 92104 97312"' 
-    phalfs['daily']=' -p "0 9 33 94 231 500 838 1133 1714 2784 4210 5985 8071 9592 10813 12918 15537 18199 19767 21090 23482 26057 28580 31060 33510 35952 38405 40892 43436 46058 48777 51612 54580 57697 60978 64436 68105 71957 76005 80302 83755 86087 89639 94708 100000"' # levels calculated from find_phalf.py
     #plevs['daily']  =' -p "1000 10000 25000 50000 85000 92500"'
-    
+    # Changed daily to be same as monthly:
+    plevs['daily']=' -p "1 3 6 10 16 25 39 60 90 133 192 273 384 532 726 978 1301 1710 2223 2856 3633 4573 5703 7049 8638 10501 12672 15186 18082 21403 25198 29521 34436 40014 46340 53516 61661 70918 81460 93499"' 
+        
     var_names['monthly']='-a slp height'
     var_names['pentad']='-a slp height'    
     var_names['timestep']='-a'
     var_names['6hourly']='ucomp slp height vor t_surf vcomp omega'
-    
-    # changes below to be same as for monthly:
-    var_names['daily']='-a slp height'
     #var_names['daily']='ucomp slp height vor t_surf vcomp omega temp'
-    file_suffix='_interp_new_height_temp'
+    # Changed daily to be same as monthly:
+    var_names['daily']='-a slp height'
+
+    file_suffix='_interp'
 
 elif level_set=='ssw_diagnostics':
     plevs['6hourly']=' -p "1000 10000"'
@@ -84,11 +85,9 @@ for exp_name in exp_name_list:
 
             nc_file_in = base_dir+'/'+exp_name+'/run'+number_prefix+str(n+start_file)+'/atmos_'+avg_or_daily+'.nc'
             nc_file_out = out_dir+'/'+exp_name+'/run'+number_prefix+str(n+start_file)+'/atmos_'+avg_or_daily+file_suffix+'.nc'
-
+          
             if not os.path.isfile(nc_file_out):
                 plevel_call(nc_file_in,nc_file_out, var_names = var_names[avg_or_daily], p_levels = plevs[avg_or_daily], mask_below_surface_option=mask_below_surface_set)
-                #how do I get it to output as phalf coordinate?
-                #plevel_call(nc_file_in,nc_file_out, var_names = var_names[avg_or_daily], p_levels = phalfs[avg_or_daily], mask_below_surface_option=mask_below_surface_set)
             if do_extra_averaging and avg_or_daily=='6hourly':
                 nc_file_out_daily = base_dir+'/'+exp_name+'/run'+str(n+start_file)+'/atmos_daily'+file_suffix+'.nc'
                 daily_average(nc_file_out, nc_file_out_daily)
