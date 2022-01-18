@@ -23,14 +23,16 @@ cb.compile()  # compile the source code to working directory $GFDL_WORK/codebase
 # create an Experiment object to handle the configuration of model parameters
 # and output diagnostics
 
-exp_name = 'PK_eps0_vtx3_zoz13_7y' # updated experiment name
+exp_name = 'PK_eps0_vtx3_zoz13_heat' # updated experiment name
 exp = Experiment(exp_name, codebase=cb)
 
 #exp.inputfiles = [os.path.join(GFDL_BASE,'input/land_masks/era_land_t42.nc')]
+exp.inputfiles = [os.path.join(GFDL_BASE,'input/polar_heating/w15a1p800f800g50.nc')]
+
 
 #Tell model how to write diagnostics
 diag = DiagTable()
-diag.add_file('atmos_monthly', 30, 'days', time_units='days') 
+#diag.add_file('atmos_monthly', 30, 'days', time_units='days') 
 diag.add_file('atmos_daily', 1, 'days', time_units='days') # added output of daily file
 
 #Tell model which diagnostics to write
@@ -47,7 +49,7 @@ diag.add_field('dynamics', 'div', time_avg=True)
 diag.add_field('dynamics', 'height', time_avg=True) # added diagnostic field for height
 
 diag.add_field('hs_forcing', 'teq', time_avg=True) # added diagnostic field as sanity check on Teq
-#diag.add_field('hs_forcing', 'local_heating', time_avg=True) # added diagnostic field for polar heating check
+diag.add_field('hs_forcing', 'local_heating', time_avg=True) # added diagnostic field for polar heating check
 
 exp.diag_table = diag
 
@@ -102,11 +104,11 @@ namelist = Namelist({
 
         'z_ozone': 13.,     # added height of stratospheric heating source
         'do_conserve_energy':   True,  # convert dissipated momentum into heat (default True)
-        'sponge_flag': True #,     # added sponge layer for simple damping in upper levels
+        'sponge_flag': True,     # added sponge layer for simple damping in upper levels
 
         # variables for polar heating
-        #'local_heating_option': 'from_file', # 'Polar',
-        #'local_heating_file': 'w15.0a1.0p800.0f800.0g50.0.nc',
+        'local_heating_option': 'from_file', # 'Polar',
+        'local_heating_file': 'w15a1p800f800g50' #,
         #'polar_heating_srfamp': 2., #X K/day heating
         #'polar_heating_latwidth':   20., # in degrees 
         #'polar_heating_latcenter':   90.,  # in degrees
@@ -134,6 +136,6 @@ exp.set_resolution(*RESOLUTION)
 
 #Let's do a run!
 if __name__ == '__main__':
-    exp.run(1, num_cores=NCORES, use_restart=False)
-    for i in range(2, 85): #~7y worth
+    #exp.run(1, num_cores=NCORES, use_restart=False)
+    for i in range(25, 85): #~7y worth (excl. 2y of spin-up)
         exp.run(i, num_cores=NCORES)  # use the restart i-1 by default
