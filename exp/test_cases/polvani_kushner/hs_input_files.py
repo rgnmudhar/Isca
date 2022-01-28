@@ -133,10 +133,10 @@ def polar_heating(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., sa
     #heat_lat = np.exp(-((data.lat - 90.)/y_wid)**2.) + np.exp(-((data.lat + 90.)/y_wid)**2.) * template
     heat_lat = np.exp(-((data.lat - 90.)/y_wid)**2.) * template # for north pole only
         
-    # fix so that the function has magnitude 1 when del_p = fix_energy, and otherwise scales to give constant net energy input
-    # fix energy can be varied to alter the total input, which I think will be (1000-fix_energy) * cp/g * th_mag
+    # fix so that the function has magnitude 1 when p_top = p_ref, and otherwise scales to give constant net energy input
+    # p_ref can be varied to alter the total input, which I think will be (1000-p_ref) * cp/g * th_mag
     
-    if p_top==0.:  # If the heating is going right to the model top then make heating uniform in height, scaled to fit fix_energy level
+    if p_top==0.:  # If the heating is going right to the model top then make heating uniform in height, scaled to fit p_ref level
         polar_heating = th_mag * (1000. - p_ref)/1000. * heat_lat /86400.
     else:
         polar_heating = 0.5 * th_mag * (1000. - p_ref)/(1000. - p_top) * heat_lat * (1. + np.tanh((data.pfull - p_top)/p_th)) /86400.
