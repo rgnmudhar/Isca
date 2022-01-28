@@ -116,16 +116,16 @@ def st_forcing(t_zero=315., t_strat=200., delht=60., delhs=40., delv=10., eps=0.
 
 
 
-def polar_heating(y_wid=15., th_mag=1., del_p = 800., p_th = 50., fix_energy=800., save_output=True):
+def polar_heating(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., save_output=True):
     
     # Parameter sweep
-    # 1. Vary del_p - depth f forcing: 0:200:800 (1000 would be no forcing!)   5
+    # 1. Vary p_top - depth f forcing: 0:200:800 (1000 would be no forcing!)   5
     # 2. Vary th_mag - magnitude of forcing in K/s when centred on 800hPa  (0.5,1.,1.5,2.) Could try negative values too   4
     # 3. Vary y_wid - decay of forcing away from pole (10., 15., 20.)     3
     # 4. Vary p_th - sets vertical gradient of forcing at cap (25.,50.,75.) Sensitivity check that steepness of transition doesn't cause unexpected   3 behaviour
     
     ozone_file = '/home/links/rm811/Isca/input/rrtm_input_files/ozone_1990_notime.nc'
-    data = xr.open_dataset( ozone_file, decode_times=False)
+    data = xr.open_dataset(ozone_file, decode_times=False)
     
     template = data.ozone_1990 * 0. + 1.
     
@@ -136,10 +136,10 @@ def polar_heating(y_wid=15., th_mag=1., del_p = 800., p_th = 50., fix_energy=800
     # fix so that the function has magnitude 1 when del_p = fix_energy, and otherwise scales to give constant net energy input
     # fix energy can be varied to alter the total input, which I think will be (1000-fix_energy) * cp/g * th_mag
     
-    if del_p==0.:  # If the heating is going right to the model top then make heating uniform in height, scaled to fit fix_energy level
-        polar_heating = th_mag * (1000. - fix_energy)/1000. * heat_lat /86400.
+    if p_top==0.:  # If the heating is going right to the model top then make heating uniform in height, scaled to fit fix_energy level
+        polar_heating = th_mag * (1000. - p_ref)/1000. * heat_lat /86400.
     else:
-        polar_heating = th_mag * (1000. - fix_energy)/(1000. - del_p) * heat_lat * 0.5 * (1. + np.tanh((data.pfull - del_p)/p_th)) /86400.
+        polar_heating = 0.5 * th_mag * (1000. - p_ref)/(1000. - p_top) * heat_lat * (1. + np.tanh((data.pfull - p_top)/p_th)) /86400.
     
     coord_list = ["pfull", "lat", "lon"]
     polar_heating = xr.Dataset(
@@ -151,7 +151,7 @@ def polar_heating(y_wid=15., th_mag=1., del_p = 800., p_th = 50., fix_energy=800
     
     if save_output:
         # NB filename should be 32 characters or less
-        filename = 'w' + str(int(y_wid)) + 'a' + str(int(th_mag)) + 'p' + str(int(del_p)) + 'f' + str(int(fix_energy)) + 'g' + str(int(p_th))
+        filename = 'w' + str(int(y_wid)) + 'a' + str(int(th_mag)) + 'p' + str(int(p_top)) + 'f' + str(int(p_ref)) + 'g' + str(int(p_th))
         print(len(filename))
         #filename='heating_test'
         polar_heating = polar_heating.rename({"polar_heating" : filename})
