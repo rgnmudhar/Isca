@@ -116,13 +116,13 @@ def st_forcing(t_zero=315., t_strat=200., delht=60., delhs=40., delv=10., eps=0.
 
 
 
-def polar_heating(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., save_output=True):
+def polar_heating(y_wid=15., th_mag=2., p_top = 800., p_th = 50., p_ref=800., save_output=True):
     
     # Parameter sweep
-    # 1. Vary p_top - depth f forcing: 0:200:800 (1000 would be no forcing!)   5
-    # 2. Vary th_mag - magnitude of forcing in K/s when centred on 800hPa  (0.5,1.,1.5,2.) Could try negative values too   4
-    # 3. Vary y_wid - decay of forcing away from pole (10., 15., 20.)     3
-    # 4. Vary p_th - sets vertical gradient of forcing at cap (25.,50.,75.) Sensitivity check that steepness of transition doesn't cause unexpected   3 behaviour
+    # 1. Vary p_top - depth of forcing: 0:200:800 (1000 would be no forcing!)
+    # 2. Vary th_mag - magnitude of forcing in K/s when centred on 800hPa  (0.5,1.,1.5,2.) Could try negative values too
+    # 3. Vary y_wid - decay of forcing away from pole (10., 15., 20.)
+    # 4. Vary p_th - sets vertical gradient of forcing at cap (25.,50.,75.) Sensitivity check that steepness of transition doesn't cause unexpected behaviour
     
     ozone_file = '/home/links/rm811/Isca/input/rrtm_input_files/ozone_1990_notime.nc'
     data = xr.open_dataset(ozone_file, decode_times=False)

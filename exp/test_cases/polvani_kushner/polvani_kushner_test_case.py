@@ -23,11 +23,15 @@ cb.compile()  # compile the source code to working directory $GFDL_WORK/codebase
 # create an Experiment object to handle the configuration of model parameters
 # and output diagnostics
 
-exp_name = 'PK_eps0_vtx3_zoz13_heat' # updated experiment name
+# if using local heating from file:
+inputpath = 'input/polar_heating/'
+inputfile = 'w15a0.5p800f800g50'
+
+exp_name = 'PK_eps0_vtx3_zoz13_'+inputfile # updated experiment name
 exp = Experiment(exp_name, codebase=cb)
 
 #exp.inputfiles = [os.path.join(GFDL_BASE,'input/land_masks/era_land_t42.nc')]
-exp.inputfiles = [os.path.join(GFDL_BASE,'input/polar_heating/w15a1p800f800g50.nc')]
+exp.inputfiles = [os.path.join(GFDL_BASE,inputpath+inputfile+'.nc')]
 
 
 #Tell model how to write diagnostics
@@ -108,7 +112,7 @@ namelist = Namelist({
 
         # variables for polar heating
         'local_heating_option': 'from_file', # 'Polar',
-        'local_heating_file': 'w15a1p800f800g50' #,
+        'local_heating_file': inputfile #,
         #'polar_heating_srfamp': 2., #X K/day heating
         #'polar_heating_latwidth':   20., # in degrees 
         #'polar_heating_latcenter':   90.,  # in degrees
@@ -137,5 +141,5 @@ exp.set_resolution(*RESOLUTION)
 #Let's do a run!
 if __name__ == '__main__':
     #exp.run(1, num_cores=NCORES, use_restart=False)
-    for i in range(25, 85): #~7y worth (excl. 2y of spin-up)
+    for i in range(2, 85): #~7y worth (excl. 2y of spin-up)
         exp.run(i, num_cores=NCORES)  # use the restart i-1 by default
