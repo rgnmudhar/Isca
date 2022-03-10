@@ -116,7 +116,7 @@ def st_forcing(t_zero=315., t_strat=200., delht=60., delhs=40., delv=10., eps=0.
 
 
 
-def polar_heating(y_wid=15., th_mag=2., p_top = 800., p_th = 50., p_ref=800., save_output=True):
+def polar_heating(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., save_output=True):
     
     # Parameter sweep
     # 1. Vary p_top - depth of forcing: 0:200:800 (1000 would be no forcing!)
@@ -200,15 +200,17 @@ def plot_polar_heating(filename):
     heat = ds.variables[name]
     heatz = heat.mean(dim='lon').data   
     
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    cs = plt.contourf(lat, z, heatz, levels=25, cmap='RdBu_r')
-    plt.xlabel('Latitude')
-    plt.xticks([-90, -45, 0, 45, 90], ['90S', '45S', '0', '45N', '90N'])
-    plt.ylabel('Pseudo-Altitude (km)')
-    plt.ylim(min(z), upper_z) #goes to ~1hPa
-    plt.colorbar()
-    plt.title('Polar Heating (K/s)')
+    # Plot for comparison with Screen & Simmonds (2010)
+    plt.figure(figsize=(10,8))
+    plt.contourf(lat, p, heatz, cmap='Reds', levels=np.arange(0, 5e-5, 2e-6))
+    plt.xlim(0, 90)
+    plt.ylim(max(p), 100)
+    #plt.yscale('log')
+    plt.colorbar(label="Heating (K/s)")
+    plt.xlabel(r'Latitude ($\degree$N)', fontsize='x-large')
+    plt.ylabel("Pressure (hPa)", fontsize='x-large')
+    plt.title(name, fontsize='x-large')
+    plt.tick_params(axis='both', labelsize = 'x-large', which='both', direction='in')
 
     return plt.show()
     
