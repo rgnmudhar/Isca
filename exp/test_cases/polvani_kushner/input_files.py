@@ -1,12 +1,10 @@
 """
-Script for producing file for a) prescribed polar heating based on Orlanski & Solman (2010) and work by Ruth Geen
-and b) heating perturbation based on Lindgren et al. (2018)/idealised topography based on Gerber & Polvani (2009) to introduce zonal asymmetry
+Script that creates a file for prescribed polar heating based on Orlanski and Solman (2010) and Ruth Geen's H-S work
 """
+
 import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
-import sh
-from pylab import rcParams
 
 def polar_heating(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., save_output=True):
     
@@ -109,5 +107,5 @@ def plot_polar_heating(filename):
 H = 8
 p0 = 1000
 
-#filename = polar_heating()
-#plot_polar_heating(filename)
+filename = polar_heating()
+plot_polar_heating(filename)
