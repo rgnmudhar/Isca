@@ -26,17 +26,17 @@
 import numpy as np
 from netCDF4 import Dataset
 import matplotlib.pyplot as plt
-from mpl_toolkits.basemap import Basemap
+#from mpl_toolkits.basemap import Basemap
 import os
 
-def write_land(exp,land_mode='square',boundaries=[20.,60.,20.,60.],continents=['all'],topo_mode='none',mountains=['all'],topo_gauss=[40.,40.,20.,10.,3500.],waterworld=False):
+def write_land(exp,land_mode='square',boundaries=[20.,60.,20.,60.],continents=['all'],topo_mode='gaussian',mountains=['all'],topo_gauss=[45.,40.,20.,10.,4000.],waterworld=False):
 
 # Common features of set-ups
     # specify resolution
     t_res = 42
     #read in grid from approriate file
     GFDL_BASE = os.environ['GFDL_BASE']
-    resolution_file = Dataset(GFDL_BASE + 'src/extra/python/scripts/gfdl_grid_files/t'+str(t_res)+'.nc', 'r', format='NETCDF3_CLASSIC')
+    resolution_file = Dataset(GFDL_BASE + '/src/extra/python/scripts/gfdl_grid_files/t'+str(t_res)+'.nc', 'r', format='NETCDF3_CLASSIC')
     lons = resolution_file.variables['lon'][:]
     lats = resolution_file.variables['lat'][:]
     lonb = resolution_file.variables['lonb'][:]
@@ -109,9 +109,11 @@ def write_land(exp,land_mode='square',boundaries=[20.,60.,20.,60.],continents=['
     
 # Next produce a topography array
     if topo_mode == 'none':
+        print("doing none")
         topo_array = np.zeros((nlat,nlon))
         
     elif topo_mode == 'sauliere2012':
+        print("doing sauliere")
         # Rockys from Sauliere 2012
         h_0 = 2670.
         central_lon = 247.5
@@ -152,6 +154,7 @@ def write_land(exp,land_mode='square',boundaries=[20.,60.,20.,60.],continents=['
 
             
     elif topo_mode == 'gaussian':
+        print("doing gaussian")
         #Options to define simple Gaussian Mountain
         central_lat = topo_gauss[0]
         central_lon = topo_gauss[1]
@@ -177,7 +180,7 @@ def write_land(exp,land_mode='square',boundaries=[20.,60.,20.,60.],continents=['
 
 
     #Write land and topography arrays to file
-    topo_filename = GFDL_BASE + 'exp/' + exp + '/input/land.nc'
+    topo_filename = GFDL_BASE + '/input/land_masks/idealised_topo.nc'
     topo_file = Dataset(topo_filename, 'w', format='NETCDF3_CLASSIC')
     lat = topo_file.createDimension('lat', nlat)
     lon = topo_file.createDimension('lon', nlon)
@@ -194,19 +197,19 @@ def write_land(exp,land_mode='square',boundaries=[20.,60.,20.,60.],continents=['
 
 
     #Show configuration on screen to allow checking
-    lon_0 = lons.mean()
-    lat_0 = lats.mean()
-    m = Basemap(lat_0=lat_0,lon_0=lon_0)
-    xi, yi = m(lon_array, lat_array)
-    plt.figure()
-    if land_mode != 'none':
-        m.contour(xi,yi,land_array)
-    if topo_mode != 'none':
-        cs = m.contourf(xi,yi,topo_array, cmap=plt.get_cmap('RdBu_r'))
-        cb = plt.colorbar(cs, shrink=0.5, extend='both')
-    plt.xticks(np.linspace(0,360,13))
-    plt.yticks(np.linspace(-90,90,7))
-    plt.show()
+    #lon_0 = lons.mean()
+    #lat_0 = lats.mean()
+    #m = Basemap(lat_0=lat_0,lon_0=lon_0)
+    #xi, yi = m(lon_array, lat_array)
+    #plt.figure()
+    #if land_mode != 'none':
+    #    m.contour(xi,yi,land_array)
+    #if topo_mode != 'none':
+    #    cs = m.contourf(xi,yi,topo_array, cmap=plt.get_cmap('RdBu_r'))
+    #    cb = plt.colorbar(cs, shrink=0.5, extend='both')
+    #plt.xticks(np.linspace(0,360,13))
+    #plt.yticks(np.linspace(-90,90,7))
+    #plt.show()
 
 
 
