@@ -5,6 +5,57 @@ Script that creates a file for prescribed polar heating based on Orlanski and So
 import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
+from netCDF4 import Dataset
+import os
+
+def polar_heating(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., save_output=True):
+    
+    # Parameter sweep
+    # 1. Vary p_top - depth of forcing: 0:200:800 (1000 would be no forcing!)
+    # 2. Vary th_mag - magnitude of forcing in K/s when centred on 800hPa  (0.5,1.,1.5,2.) Could try negative values too
+    # 3. Vary y_wid - decay of forcing away from pole (10., 15., 20.)
+    # 4. Vary p_th - sets vertical gradient of forcing at cap (25.,50.,75.) Sensitivity check that steepness of transition doesn't cause unexpected behaviour
+    
+    ozone_file = '/home/links/rm811/Isca/input/rrtm_input_files/ozone_1990_notime.nc'
+    data = xr.open_dataset(ozone_file, decode_times=False)
+    
+    template = data.ozone_1990 * 0. + 1.
+    
+    # Vary with latitude in similar way to Orlanski and Solman 2010
+    #heat_lat = np.exp(-((data.lat - 90.)/y_wid)**2.) + np.exp(-((data.lat + 90.)/y_wid)**2.) * template
+    heat_lat = np.exp(-((data.lat - 90.)/y_wid)**2.) * template # for north pole only
+        
+    # fix so that the function has magnitude 1 when p_top = p_ref, and otherwise scales to give constant net energy input
+    # p_ref can be varied to alter the total input, which I think will be (1000-p_ref) * cp/g * th_mag
+    
+    if p_top==0.:  # If the heating is going right to the model top then make heating uniform in height, scaled to fit p_ref level
+        polar_heating = th_mag * (1000. - p_ref)/1000. * heat_lat /86400.
+    else:
+        polar_heating = 0.5 * th_mag * (1000. - p_ref)/(1000. - p_top) * heat_lat * (1. + np.tanh((data.pfull - p_top)/p_th)) /86400.
+    
+    coord_list = ["pfull", "lat", "lon"]
+    polar_heating = xr.Dataset(
+         data_vars=dict(
+             polar_heating = (coord_list, polar_heating.transpose('pfull','lat','lon').values)
+         ),
+         coords=data.coords
+    )
+    
+    if save_output:
+        # NB filename should be 32 characters or less
+        filename = 'w' + str(int(y_wid)) + 'a' + str(int(th_mag)) + 'p' + str(int(p_top)) + 'f' + str(int(p_ref)) + 'g' + str(int(p_th))
+        print(len(filename))
+        #filename='heating_test'
+        polar_heating = polar_heating.rename({"polar_heating" : filename})
+        
+        polar_heating.to_netcdf('/home/links/rm811/Isca/input/polar_heating/' + filename + '.nc', format="NETCDF3_CLASSIC",
+             encoding = {filename: {"dtype": 'float32', '_FillValue': None},
+                    "lat": {'_FillValue': None}, "lon": {'_FillValue': None},
+                    "latb": {'_FillValue': None}, "lonb": {'_FillValue': None},
+                    "pfull": {'_FillValue': None}, "phalf": {'_FillValue': None}}
+                )
+    
+    return filename
 
 def plot_polar_heating(filename):
     
@@ -32,100 +83,91 @@ def plot_polar_heating(filename):
 
     return plt.show()
 
-def polar_heating(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., save_output=True):
+"""
+def ideal_topo(topo_gauss=[45.,40.,20.,10.,4000.]):
     
-    # Parameter sweep
-    # 1. Vary p_top - depth of forcing: 0:200:800 (1000 would be no forcing!)
-    # 2. Vary th_mag - magnitude of forcing in K/s when centred on 800hPa  (0.5,1.,1.5,2.) Could try negative values too
-    # 3. Vary y_wid - decay of forcing away from pole (10., 15., 20.)
-    # 4. Vary p_th - sets vertical gradient of forcing at cap (25.,50.,75.) Sensitivity check that steepness of transition doesn't cause unexpected behaviour
-    
-    ozone_file = '/home/links/rm811/Isca/input/rrtm_input_files/ozone_1990_notime.nc'
-    data = xr.open_dataset(ozone_file, decode_times=False)
-    
-    template = data.ozone_1990 * 0. + 1.
-    
-    # Vary with latitude in similar way to Orlanski and Solman 2010
-    #heat_lat = np.exp(-((data.lat - 90.)/y_wid)**2.) + np.exp(-((data.lat + 90.)/y_wid)**2.) * template
-    heat_lat = np.exp(-((data.lat - 90.)/y_wid)**2.) * template # for north pole only
-        
-    # fix so that the function has magnitude 1 when p_top = p_ref, and otherwise scales to give constant net energy input
-    # p_ref can be varied to alter the total input, which I think will be (1000-p_ref) * cp/g * th_mag
-    
-    if p_top==0.:  # If the heating is going right to the model top then make heating uniform in height, scaled to fit p_ref level
-        polar_heating = th_mag * (1000. - p_ref)/1000. * heat_lat /86400.
-    else:
-        polar_heating = 0.5 * th_mag * (1000. - p_ref)/(1000. - p_top) * heat_lat * (1. + np.tanh((data.pfull - p_top)/p_th)) /86400.
-    
-    coord_list = ["pfull", "lat", "lon"]
-    polar_heating = xr.Dataset(
-         data_vars=dict(
-             polar_heating = (coord_list, polar_heating.transpose('pfull','lat','lon').values)
-         ),
-         coords=data.coords
-    )
-    
-    if save_output:
-        # NB filename should be 32 characters or less
-        filename = 'w' + str(int(y_wid)) + 'a' + str(int(th_mag)) + 'p' + str(int(p_top)) + 'f' + str(int(p_ref)) + 'g' + str(int(p_th))
-        print(len(filename))
-        #filename='heating_test'
-        polar_heating = polar_heating.rename({"polar_heating" : filename})
-        
-        polar_heating.to_netcdf('/home/links/rm811/Isca/input/polar_heating/' + filename + '.nc', format="NETCDF3_CLASSIC",
-             encoding = {filename: {"dtype": 'float32', '_FillValue': None},
-                    "lat": {'_FillValue': None}, "lon": {'_FillValue': None},
-                    "latb": {'_FillValue': None}, "lonb": {'_FillValue': None},
-                    "pfull": {'_FillValue': None}, "phalf": {'_FillValue': None}}
-                )
-    
-    return filename
+    # specify resolution
+    t_res = 42
+    #read in grid from approriate file
+    GFDL_BASE = os.environ['GFDL_BASE']
+    resolution_file = Dataset(GFDL_BASE+'/src/extra/python/scripts/gfdl_grid_files/t'+str(t_res)+'.nc', 'r', format='NETCDF3_CLASSIC')
+    lons = resolution_file.variables['lon'][:]
+    lats = resolution_file.variables['lat'][:]
+    lonb = resolution_file.variables['lonb'][:]
+    latb = resolution_file.variables['latb'][:]
+    nlon=lons.shape[0]
+    nlat=lats.shape[0]
+    topo_array = np.zeros((nlat,nlon))
 
-def polar_heating(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., save_output=True):
+    #make 2d arrays of latitude and longitude
+    lon_array, lat_array = np.meshgrid(lons,lats)
+    lonb_array, latb_array = np.meshgrid(lonb,latb)
     
-    # Parameter sweep
-    # 1. Vary p_top - depth of forcing: 0:200:800 (1000 would be no forcing!)
-    # 2. Vary th_mag - magnitude of forcing in K/s when centred on 800hPa  (0.5,1.,1.5,2.) Could try negative values too
-    # 3. Vary y_wid - decay of forcing away from pole (10., 15., 20.)
-    # 4. Vary p_th - sets vertical gradient of forcing at cap (25.,50.,75.) Sensitivity check that steepness of transition doesn't cause unexpected behaviour
+    central_lat = topo_gauss[0]
+    central_lon = topo_gauss[1]
+    radius_degrees = topo_gauss[2]
+    std_dev = topo_gauss[3]
+    height = topo_gauss[4]
+    rsqd_array = np.sqrt((lon_array - central_lon)**2.+(lat_array - central_lat)**2.)
+    idx = (rsqd_array < radius_degrees) 
+    topo_array[idx] = height* np.exp(-(rsqd_array[idx]**2.)/(2.*std_dev**2.))
+
+    filename = GFDL_BASE + '/input/asymmetry/idealised_topo.nc'
+    topo_file = Dataset(filename, 'w', format='NETCDF3_CLASSIC')
+    lat = topo_file.createDimension('lat', nlat)
+    lon = topo_file.createDimension('lon', nlon)
+    latitudes = topo_file.createVariable('lat','f4',('lat',))
+    longitudes = topo_file.createVariable('lon','f4',('lon',))
+    topo_array_netcdf = topo_file.createVariable('zsurf','f4',('lat','lon',))
+    latitudes[:] = lats
+    longitudes[:] = lons
+    topo_array_netcdf[:] = topo_array
+    topo_file.close()
+
+    return filename
+"""
+
+def ideal_topo(y_min=25., y_max=65, h_0=4000., m=2., save_output=True):
+    """
+    #Bottom topography in the NH specified by setting the surface geopotential height.
+    #Based on Sheshadri et al. (2015).
+    Code based on Ruth Geen's hs_input_file.py script.
+    """
     
-    ozone_file = '/home/links/rm811/Isca/input/rrtm_input_files/ozone_1990_notime.nc'
-    data = xr.open_dataset(ozone_file, decode_times=False)
+    # Parameters
+    # 1. y_min and y_max - centers topography at 45N
+    # 2. m -  wave number of topography (1 or 2)
+    # 3. h_0 = height of topography
+    g = 9.81 # gravity in m/s
+
+    file = '/home/links/rm811/Isca/input/dimensions_2d.nc'
+    ds = xr.open_dataset(file, decode_times=False)
     
-    template = data.ozone_1990 * 0. + 1.
-    
-    # Vary with latitude in similar way to Orlanski and Solman 2010
-    #heat_lat = np.exp(-((data.lat - 90.)/y_wid)**2.) + np.exp(-((data.lat + 90.)/y_wid)**2.) * template
-    heat_lat = np.exp(-((data.lat - 90.)/y_wid)**2.) * template # for north pole only
-        
-    # fix so that the function has magnitude 1 when p_top = p_ref, and otherwise scales to give constant net energy input
-    # p_ref can be varied to alter the total input, which I think will be (1000-p_ref) * cp/g * th_mag
-    
-    if p_top==0.:  # If the heating is going right to the model top then make heating uniform in height, scaled to fit p_ref level
-        polar_heating = th_mag * (1000. - p_ref)/1000. * heat_lat /86400.
-    else:
-        polar_heating = 0.5 * th_mag * (1000. - p_ref)/(1000. - p_top) * heat_lat * (1. + np.tanh((data.pfull - p_top)/p_th)) /86400.
-    
-    coord_list = ["pfull", "lat", "lon"]
-    polar_heating = xr.Dataset(
+    template = ds.data * 0. + 1.
+    topo_lat = (np.sin(np.pi * (ds.lat - y_min)/(y_max - y_min)))**2 * template
+    topo_lon = np.cos(m * np.deg2rad(ds.lon)) * template
+
+    zsurf = g * h_0 * topo_lat * topo_lon
+    zsurf = zsurf.where(zsurf['lat']>y_min, 0)
+    zsurf = zsurf.where(zsurf['lat']<y_max, 0)
+
+    coord_list = ["lat", "lon"]
+    zsurf = xr.Dataset(
          data_vars=dict(
-             polar_heating = (coord_list, polar_heating.transpose('pfull','lat','lon').values)
+             zsurf = (coord_list, zsurf.transpose('lat','lon').values)
          ),
-         coords=data.coords
+         coords=ds.coords
     )
     
     if save_output:
         # NB filename should be 32 characters or less
-        filename = 'w' + str(int(y_wid)) + 'a' + str(int(th_mag)) + 'p' + str(int(p_top)) + 'f' + str(int(p_ref)) + 'g' + str(int(p_th))
+        filename = 'h' + str(int(h_0)) + 'm' + str(int(m)) + 'l' + str(int(y_min)) + 'u' + str(int(y_max))
         print(len(filename))
-        #filename='heating_test'
-        polar_heating = polar_heating.rename({"polar_heating" : filename})
-        
-        polar_heating.to_netcdf('/home/links/rm811/Isca/input/polar_heating/' + filename + '.nc', format="NETCDF3_CLASSIC",
-             encoding = {filename: {"dtype": 'float32', '_FillValue': None},
+
+        zsurf.to_netcdf('/home/links/rm811/Isca/input/asymmetry/' + filename + '.nc', format="NETCDF3_CLASSIC",
+             encoding = {'zsurf': {"dtype": 'float32', '_FillValue': None},
                     "lat": {'_FillValue': None}, "lon": {'_FillValue': None},
-                    "latb": {'_FillValue': None}, "lonb": {'_FillValue': None},
-                    "pfull": {'_FillValue': None}, "phalf": {'_FillValue': None}}
+                    "latb": {'_FillValue': None}, "lonb": {'_FillValue': None}}
                 )
     
     return filename
@@ -134,6 +176,7 @@ def heat_perturb(q_0=6, m=2, y_cen=45, p_0=800, p_t=200, save_output=True):
     """
     Tropospheric diabatic heating perturbation to induce NH winter-like wave activity.
     Based on Lindgren et al. (2018).
+    Code based on Ruth Geen's hs_input_file.py script.
     """
     # Parameters
     # 1. q_0 - magnitude of forcing in K/day
@@ -142,7 +185,7 @@ def heat_perturb(q_0=6, m=2, y_cen=45, p_0=800, p_t=200, save_output=True):
     # 4. p_0 and p_t - lower and upper bounds in pressure (hPa) respectively
     y_wid = 0.175*360/(2*np.pi)
 
-    file = '/home/links/rm811/Isca/input/dimensions.nc'
+    file = '/home/links/rm811/Isca/input/dimensions_3d.nc'
     ds = xr.open_dataset(file, decode_times=False)
     
     template = ds.data * 0. + 1.
@@ -238,5 +281,5 @@ if __name__ == '__main__':
         plot_horizontal(filename)
         plot_vertical(filename)
     elif option =='c':
-        filename = ideal_topo()
-        plot(filename)
+        ideal_topo()
+        #plot_horizontal(filename)
