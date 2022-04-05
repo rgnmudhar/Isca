@@ -113,7 +113,7 @@ private
 
    Logical :: sponge_flag = .false. ! flag for sponge layer at the top
    real :: sponge_pbottom = 5.e1 ! Bottom of sponge layer with zero damping (Pa)
-   Real :: sponge_tau_days = 0.5 ! Sponge damping time scale (days)
+   real :: sponge_tau_days = 0.4 ! Sponge damping time scale (days) - changed from 0.5 to get 2.5 /days
 
 !-----------------------------------------------------------------------
 
@@ -690,16 +690,16 @@ real, intent(in),  dimension(:,:,:), optional :: mask
 
       else if(trim(equilibrium_t_option) == 'Polvani_Kushner') then
          p_norm(:,:) = p_full(:,:,k)/pref ! Same as H-S
-         the   (:,:) = t_star(:,:) - delv*cos_lat_2(:,:)*log(p_norm(:,:)) ! Same as H-S 
-         t_hs(:,:) = the(:,:)*(p_norm(:,:))**KAPPA ! Eqn A3 in P-K : renamed Teq for H-S for troposphere
-         z_km(:,:) = zfull(:,:,k)/1000. ! Convert m > km
+         the   (:,:) = t_star(:,:) - delv*cos_lat_2(:,:)*log(p_norm(:,:))   ! Same as H-S 
+         t_hs(:,:) = the(:,:)*(p_norm(:,:))**KAPPA 			! Eqn A3 in P-K : renamed Teq for H-S for troposphere
+         z_km(:,:) = zfull(:,:,k)/1000. 					! Convert m > km
          call tstd_summer( t_strat, z_offset, z_km, t_summer )
          call tstd_winter( t_strat, vtx_gamma, z_vortex, z_km, t_winter )
-         t_pk = ((1.0 - w_vtx) * t_summer) + (w_vtx * t_winter) ! Eqn A1 in P-K
+         t_pk = ((1.0 - w_vtx) * t_summer) + (w_vtx * t_winter) 		! Eqn A1 in P-K
          where (z_km >= z_vortex)
-	    teq(:,:,k) = max( t_pk, t_min ) ! t_min used to prevent reaching unphysically low T above vortex level
+	    teq(:,:,k) = max( t_pk, t_min ) 				! t_min used to prevent reaching unphysically low T above vortex level
          elsewhere
-	    teq(:,:,k) = max( t_hs, t_strat ) ! Uses H-S form below altitude of the vortex
+	    teq(:,:,k) = max( t_hs, t_strat ) 				! Uses H-S form below altitude of the vortex
          endwhere
 
       else
@@ -789,7 +789,7 @@ real :: sponge_coeff ! Used if sponge_flag = true for Polvani_Kushner
          endwhere
 
       if (sponge_flag) then
-         sponge_coeff = 1./sponge_tau_days/86400. ! TBC with convert per day > per seconds
+         sponge_coeff = 1./sponge_tau_days/86400. ! convert per day > per seconds
          where(p_full(:,:,k) < sponge_pbottom)
             vfactr(:,:) = -sponge_coeff * ((sponge_pbottom - p_full(:,:,k))/sponge_pbottom)**2 
             udt(:,:,k) = udt(:,:,k) + vfactr(:,:)*u(:,:,k)
