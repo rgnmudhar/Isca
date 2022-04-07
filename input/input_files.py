@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from netCDF4 import Dataset
 import os
 
-def polar_heating(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., save_output=True):
+def polar_heating(y_wid=35., th_mag=4., p_top = 800., p_th = 50., p_ref=800., save_output=True):
     
     # Parameter sweep
     # 1. Vary p_top - depth of forcing: 0:200:800 (1000 would be no forcing!)
@@ -40,7 +40,7 @@ def polar_heating(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., sa
          ),
          coords=data.coords
     )
-    
+
     if save_output:
         # NB filename should be 32 characters or less
         filename = 'w' + str(int(y_wid)) + 'a' + str(int(th_mag)) + 'p' + str(int(p_top)) + 'f' + str(int(p_ref)) + 'g' + str(int(p_th))
@@ -53,25 +53,44 @@ def polar_heating(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., sa
                     "lat": {'_FillValue': None}, "lon": {'_FillValue': None},
                     "latb": {'_FillValue': None}, "lonb": {'_FillValue': None},
                     "pfull": {'_FillValue': None}, "phalf": {'_FillValue': None}}
-                )
+                )    
+
+    return filename
+
+def scale_polar_heating(filename):
+    path = '/home/links/rm811/Isca/input/polar_heating/' 
+    file0 = 'w15'+filename[3:]
+    ds0 = xr.open_dataset(path+file0+'.nc')
+    ds = xr.open_dataset(path+filename+'.nc')
+    heat0 = 0
+    heat = 0
+    for i in range(len(ds0.lat)):
+        heat0 += ds0.variables[file0][-1,i,0].data
+        heat += ds.variables[filename][-1,i,0].data
+    
+    new_ds = ds / (heat/heat0)
+
+    new_ds.to_netcdf('/home/links/rm811/Isca/input/polar_heating/' + filename + '.nc', format="NETCDF3_CLASSIC",
+             encoding = {filename: {"dtype": 'float32', '_FillValue': None},
+                    "lat": {'_FillValue': None}, "lon": {'_FillValue': None},
+                    "latb": {'_FillValue': None}, "lonb": {'_FillValue': None},
+                    "pfull": {'_FillValue': None}, "phalf": {'_FillValue': None}})
     
     return filename
 
-def plot_polar_heating(filename):
+def plot_polar_heating(name):
     
-    name = filename
     file = '/home/links/rm811/Isca/input/polar_heating/' + name + '.nc'
     ds = xr.open_dataset(file)
 
     lat = ds.coords['lat'].data
-    lon = ds.coords['lon'].data
     p = ds.coords['pfull'].data
 
     heat = ds.variables[name]
     
     # Plot for comparison with Screen & Simmonds (2010)
     plt.figure(figsize=(10,8))
-    plt.contourf(lat, p, heat, cmap='Reds', levels=np.arange(0, 5e-5, 2e-6))
+    plt.contourf(lat, p, heat.mean(dim='lon'), cmap='Reds', levels=np.arange(0, 5e-5, 2e-6))
     plt.xlim(0, 90)
     plt.ylim(max(p), 100)
     #plt.yscale('log')
@@ -234,6 +253,9 @@ if __name__ == '__main__':
 
     if option =='a':
         filename = polar_heating()
+        if filename[1:3] != '15':
+            print("scaling")
+            scale_polar_heating(filename)
         plot_polar_heating(filename)
     elif option =='b':
         filename = heat_perturb()
