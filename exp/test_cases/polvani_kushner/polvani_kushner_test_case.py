@@ -27,7 +27,7 @@ cb.compile()  # compile the source code to working directory $GFDL_WORK/codebase
 inputpath = 'input/asymmetry/'
 inputfile = 'w15a4p800f800g50_q6m2y45l800u200'
 
-exp_name = 'PK_e0v4z13' #+inputfile # updated experiment name
+exp_name = 'PK_e0v4z13_'+inputfile # updated experiment name
 exp = Experiment(exp_name, codebase=cb)
 
 #exp.inputfiles = [os.path.join(GFDL_BASE,'input/land_masks/era_land_t42.nc')]
