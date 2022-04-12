@@ -104,10 +104,10 @@ def polar_heating(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., sa
         # NB filename should be 32 characters or less
         filename = 'w' + str(int(y_wid)) + 'a' + str(int(th_mag)) + 'p' + str(int(p_top)) + 'f' + str(int(p_ref)) + 'g' + str(int(p_th))
         print(len(filename))
-        polar_heat = polar_heat.rename({"polar_heat" : "heat"})
+        polar_heat = polar_heat.rename({"polar_heat" : filename})
         
         polar_heat.to_netcdf(path + 'polar_heating/' + filename + '.nc', format="NETCDF3_CLASSIC",
-             encoding = {"heat": {"dtype": 'float32', '_FillValue': None},
+             encoding = {filename: {"dtype": 'float32', '_FillValue': None},
                     "lat": {'_FillValue': None}, "lon": {'_FillValue': None},
                     "latb": {'_FillValue': None}, "lonb": {'_FillValue': None},
                     "pfull": {'_FillValue': None}, "phalf": {'_FillValue': None}}
@@ -152,9 +152,10 @@ def heat_perturb(q_0=6, m=2, y_cen=45, p_0=800, p_t=200, save_output=True):
         # NB filename should be 32 characters or less
         filename = 'q' + str(int(q_0)) + 'm' + str(int(m)) + 'y' + str(int(y_cen)) + 'l' + str(int(p_0)) + 'u' + str(int(p_t))
         print(len(filename))
-        
+        heat = heat.rename({"heat" : filename})
+
         heat.to_netcdf('/home/links/rm811/Isca/input/asymmetry/' + filename + '.nc', format="NETCDF3_CLASSIC",
-             encoding = {"heat": {"dtype": 'float32', '_FillValue': None},
+             encoding = {filename: {"dtype": 'float32', '_FillValue': None},
                     "lat": {'_FillValue': None}, "lon": {'_FillValue': None},
                     "latb": {'_FillValue': None}, "lonb": {'_FillValue': None},
                     "pfull": {'_FillValue': None}, "phalf": {'_FillValue': None}}
@@ -231,10 +232,10 @@ def combo_heating(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., q_
         filename = 'w' + str(int(y_wid)) + 'a' + str(int(th_mag)) + 'p' + str(int(p_top)) + 'f' + str(int(p_ref)) + 'g' + str(int(p_th)) +\
             '_' 'q' + str(int(q_0)) + 'm' + str(int(m)) + 'y' + str(int(y_cen)) + 'l' + str(int(p_0)) + 'u' + str(int(p_t))
         print(len(filename))
-        combo_heat = combo_heat.rename({"combo_heat" : "heat"})
+        combo_heat = combo_heat.rename({"combo_heat" : filename})
         
         combo_heat.to_netcdf(path + 'asymmetry/' + filename + '.nc', format="NETCDF3_CLASSIC",
-             encoding = {"heat": {"dtype": 'float32', '_FillValue': None},
+             encoding = {filename: {"dtype": 'float32', '_FillValue': None},
                     "lat": {'_FillValue': None}, "lon": {'_FillValue': None},
                     "latb": {'_FillValue': None}, "lonb": {'_FillValue': None},
                     "pfull": {'_FillValue': None}, "phalf": {'_FillValue': None}}
@@ -254,7 +255,7 @@ def plot_vertical(folder, filename):
 
     lat = ds.coords['lat'].data
     p = ds.coords['pfull'].data
-    heat = ds.sel(lon=180, method='nearest').variables["heat"]
+    heat = ds.sel(lon=180, method='nearest').variables[filename]
     
     # Plot
     plt.figure(figsize=(8,6))
@@ -265,7 +266,7 @@ def plot_vertical(folder, filename):
     plt.colorbar(label="Heating (K/s)")
     plt.xlabel(r'Latitude ($\degree$)', fontsize='x-large')
     plt.ylabel('Pressure (hPa)', fontsize='x-large')
-    plt.title(filename, fontsize='x-large')
+    #plt.title(filename, fontsize='x-large')
     plt.tick_params(axis='both', labelsize = 'x-large', which='both', direction='in')
 
     return plt.show()
@@ -282,7 +283,7 @@ def plot_horizontal(folder, filename):
 
     lat = ds.coords['lat'].data
     lon = ds.coords['lon'].data
-    heat = ds.sel(pfull=500, method='nearest').variables["heat"]
+    heat = ds.sel(pfull=500, method='nearest').variables[filename]
 
     #Plot
     plt.figure(figsize=(8,6))
