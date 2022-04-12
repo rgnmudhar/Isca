@@ -138,7 +138,7 @@ private
 
    integer :: id_teq, id_h_trop, id_tdt, id_udt, id_vdt, id_tdt_diss, id_diss_heat, id_local_heating, id_newtonian_damping
    real    :: missing_value = -1.e10
-   real    :: xwidth, ywidth, xcenter, ycenter, latwidth, latcenter ! namelist values converted from degrees to radians
+   real    :: xwidth, ywidth, xcenter, ycenter ! namelist values converted from degrees to radians
    real    :: srfamp ! local_heating_srfamp converted from deg/day to deg/sec
    character(len=14) :: mod_name = 'hs_forcing'
 
@@ -854,7 +854,7 @@ real, intent(in),  dimension(:,:,:) :: p_half
 real, intent(out), dimension(:,:,:) :: tdt
 
 integer :: i, j, k
-real :: lon_temp, x_temp, p_factor, sig_temp
+real :: lon_temp, x_temp, p_factor
 real, dimension(size(lon,1),size(lon,2)) :: lon_factor
 real, dimension(size(lat,1),size(lat,2)) :: lat_factor
 real, dimension(size(p_half,1),size(p_half,2),size(p_half,3)) :: p_half2
