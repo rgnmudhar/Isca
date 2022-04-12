@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from netCDF4 import Dataset
 import os
 
-def polar_heating(y_wid=35., th_mag=4., p_top = 800., p_th = 50., p_ref=800., save_output=True):
+def polar_heating(y_wid=10., th_mag=4., p_top = 800., p_th = 50., p_ref=800., save_output=True):
     
     # Parameter sweep
     # 1. Vary p_top - depth of forcing: 0:200:800 (1000 would be no forcing!)
@@ -16,7 +16,8 @@ def polar_heating(y_wid=35., th_mag=4., p_top = 800., p_th = 50., p_ref=800., sa
     # 3. Vary y_wid - decay of forcing away from pole (10., 15., 20.)
     # 4. Vary p_th - sets vertical gradient of forcing at cap (25.,50.,75.) Sensitivity check that steepness of transition doesn't cause unexpected behaviour
     
-    ozone_file = '/home/links/rm811/Isca/input/rrtm_input_files/ozone_1990_notime.nc'
+    path = '/home/links/rm811/Isca/input/'
+    ozone_file = path+'rrtm_input_files/ozone_1990_notime.nc'
     data = xr.open_dataset(ozone_file, decode_times=False)
     
     template = data.ozone_1990 * 0. + 1.
@@ -40,114 +41,30 @@ def polar_heating(y_wid=35., th_mag=4., p_top = 800., p_th = 50., p_ref=800., sa
          ),
          coords=data.coords
     )
+    
+    if int(y_wid) != 15:
+        print("scaling")
+        file0 = 'w15' + 'a' + str(int(th_mag)) + 'p' + str(int(p_top)) + 'f' + str(int(p_ref)) + 'g' + str(int(p_th))
+        ds0 = xr.open_dataset(path + 'polar_heating/' + file0 + '.nc')
+        heat0 = heat = 0
+        for i in range(len(ds0.lat)):
+            heat0 += ds0.variables[file0][-1,i,0].data
+            heat += polar_heating.polar_heating[-1,i,0].data
+    polar_heating = polar_heating / (heat/heat0)
 
     if save_output:
         # NB filename should be 32 characters or less
         filename = 'w' + str(int(y_wid)) + 'a' + str(int(th_mag)) + 'p' + str(int(p_top)) + 'f' + str(int(p_ref)) + 'g' + str(int(p_th))
         print(len(filename))
-        #filename='heating_test'
         polar_heating = polar_heating.rename({"polar_heating" : filename})
         
-        polar_heating.to_netcdf('/home/links/rm811/Isca/input/polar_heating/' + filename + '.nc', format="NETCDF3_CLASSIC",
+        polar_heating.to_netcdf(path + 'polar_heating/' + filename + '.nc', format="NETCDF3_CLASSIC",
              encoding = {filename: {"dtype": 'float32', '_FillValue': None},
                     "lat": {'_FillValue': None}, "lon": {'_FillValue': None},
                     "latb": {'_FillValue': None}, "lonb": {'_FillValue': None},
                     "pfull": {'_FillValue': None}, "phalf": {'_FillValue': None}}
                 )    
 
-    return filename
-
-def scale_polar_heating(filename):
-    path = '/home/links/rm811/Isca/input/polar_heating/' 
-    file0 = 'w15'+filename[3:]
-    ds0 = xr.open_dataset(path+file0+'.nc')
-    ds = xr.open_dataset(path+filename+'.nc')
-    heat0 = 0
-    heat = 0
-    for i in range(len(ds0.lat)):
-        heat0 += ds0.variables[file0][-1,i,0].data
-        heat += ds.variables[filename][-1,i,0].data
-    
-    new_ds = ds / (heat/heat0)
-
-    new_ds.to_netcdf('/home/links/rm811/Isca/input/polar_heating/' + filename + '.nc', format="NETCDF3_CLASSIC",
-             encoding = {filename: {"dtype": 'float32', '_FillValue': None},
-                    "lat": {'_FillValue': None}, "lon": {'_FillValue': None},
-                    "latb": {'_FillValue': None}, "lonb": {'_FillValue': None},
-                    "pfull": {'_FillValue': None}, "phalf": {'_FillValue': None}})
-    
-    return filename
-
-def plot_polar_heating(name):
-    
-    file = '/home/links/rm811/Isca/input/polar_heating/' + name + '.nc'
-    ds = xr.open_dataset(file)
-
-    lat = ds.coords['lat'].data
-    p = ds.coords['pfull'].data
-
-    heat = ds.variables[name]
-    
-    # Plot for comparison with Screen & Simmonds (2010)
-    plt.figure(figsize=(10,8))
-    plt.contourf(lat, p, heat.mean(dim='lon'), cmap='Reds', levels=np.arange(0, 5e-5, 2e-6))
-    plt.xlim(0, 90)
-    plt.ylim(max(p), 100)
-    #plt.yscale('log')
-    plt.colorbar(label="Heating (K/s)")
-    plt.xlabel(r'Latitude ($\degree$N)', fontsize='x-large')
-    plt.ylabel("Pressure (hPa)", fontsize='x-large')
-    plt.title(name, fontsize='x-large')
-    plt.tick_params(axis='both', labelsize = 'x-large', which='both', direction='in')
-
-    return plt.show()
-
-def ideal_topo(y_min=25., y_max=65, h_0=4000., m=2., save_output=True):
-    """
-    #Bottom topography in the NH specified by setting the surface geopotential height.
-    #Based on Sheshadri et al. (2015).
-    Code based on Ruth Geen's hs_input_file.py script.
-    """
-    
-    # Parameters
-    # 1. y_min and y_max - centers topography at 45N
-    # 2. m -  wave number of topography (1 or 2)
-    # 3. h_0 = height of topography
-
-    file = '/home/links/rm811/Isca/input/dimensions_2d.nc'
-    ds = xr.open_dataset(file, decode_times=False)
-    
-    template = ds.data * 0. + 1.
-    topo_lat = (np.sin(np.pi * (ds.lat - y_min)/(y_max - y_min)))**2 * template
-    topo_lon = np.cos(m * np.deg2rad(ds.lon)) * template
-
-    zsurf = h_0 * topo_lat * topo_lon
-    zsurf = zsurf.where(zsurf['lat']>y_min, 0)
-    zsurf = zsurf.where(zsurf['lat']<y_max, 0)
-    land_mask = template.where(zsurf != 0., 0)
-
-
-    coord_list = ["lat", "lon"]
-    zsurf = xr.Dataset(
-         data_vars=dict(
-             zsurf = (coord_list, zsurf.transpose('lat','lon').values),
-             land_mask = (coord_list, land_mask.transpose('lat','lon').values)
-         ),
-         coords=ds.coords
-    )
-    
-    if save_output:
-        # NB filename should be 32 characters or less
-        filename = 'h' + str(int(h_0)) + 'm' + str(int(m)) + 'l' + str(int(y_min)) + 'u' + str(int(y_max))
-        print(len(filename))
-
-        zsurf.to_netcdf('/home/links/rm811/Isca/input/asymmetry/' + filename + '.nc', format="NETCDF3_CLASSIC",
-             encoding = {'zsurf': {"dtype": 'float32', '_FillValue': None},
-                    'land_mask': {"dtype": 'float32', '_FillValue': None},
-                    "lat": {'_FillValue': None}, "lon": {'_FillValue': None},
-                    "latb": {'_FillValue': None}, "lonb": {'_FillValue': None}}
-                )
-    
     return filename
 
 def heat_perturb(q_0=6, m=2, y_cen=45, p_0=800, p_t=200, save_output=True):
@@ -197,6 +114,30 @@ def heat_perturb(q_0=6, m=2, y_cen=45, p_0=800, p_t=200, save_output=True):
                 )
     
     return filename
+
+def plot_polar_heating(name):
+    
+    file = '/home/links/rm811/Isca/input/polar_heating/' + name + '.nc'
+    ds = xr.open_dataset(file)
+
+    lat = ds.coords['lat'].data
+    p = ds.coords['pfull'].data
+
+    heat = ds.variables[name]
+    
+    # Plot for comparison with Screen & Simmonds (2010)
+    plt.figure(figsize=(10,8))
+    plt.contourf(lat, p, heat.mean(dim='lon'), cmap='Reds', levels=np.arange(0, 5e-5, 2e-6))
+    plt.xlim(0, 90)
+    plt.ylim(max(p), 100)
+    #plt.yscale('log')
+    plt.colorbar(label="Heating (K/s)")
+    plt.xlabel(r'Latitude ($\degree$N)', fontsize='x-large')
+    plt.ylabel("Pressure (hPa)", fontsize='x-large')
+    plt.title(name, fontsize='x-large')
+    plt.tick_params(axis='both', labelsize = 'x-large', which='both', direction='in')
+
+    return plt.show()
 
 def plot_vertical(filename):
     
@@ -253,9 +194,9 @@ if __name__ == '__main__':
 
     if option =='a':
         filename = polar_heating()
-        if filename[1:3] != '15':
-            print("scaling")
-            scale_polar_heating(filename)
+        #if filename[1:3] != '15':
+        #    print("scaling")
+        #    scale_polar_heating(filename)
         plot_polar_heating(filename)
     elif option =='b':
         filename = heat_perturb()
@@ -264,3 +205,53 @@ if __name__ == '__main__':
     elif option =='c':
         ideal_topo()
         #plot_horizontal(filename)
+
+'''
+def ideal_topo(y_min=25., y_max=65, h_0=4000., m=2., save_output=True):
+    """
+    #Bottom topography in the NH specified by setting the surface geopotential height.
+    #Based on Sheshadri et al. (2015).
+    Code based on Ruth Geen's hs_input_file.py script.
+    """
+    
+    # Parameters
+    # 1. y_min and y_max - centers topography at 45N
+    # 2. m -  wave number of topography (1 or 2)
+    # 3. h_0 = height of topography
+
+    file = '/home/links/rm811/Isca/input/dimensions_2d.nc'
+    ds = xr.open_dataset(file, decode_times=False)
+    
+    template = ds.data * 0. + 1.
+    topo_lat = (np.sin(np.pi * (ds.lat - y_min)/(y_max - y_min)))**2 * template
+    topo_lon = np.cos(m * np.deg2rad(ds.lon)) * template
+
+    zsurf = h_0 * topo_lat * topo_lon
+    zsurf = zsurf.where(zsurf['lat']>y_min, 0)
+    zsurf = zsurf.where(zsurf['lat']<y_max, 0)
+    land_mask = template.where(zsurf != 0., 0)
+
+
+    coord_list = ["lat", "lon"]
+    zsurf = xr.Dataset(
+         data_vars=dict(
+             zsurf = (coord_list, zsurf.transpose('lat','lon').values),
+             land_mask = (coord_list, land_mask.transpose('lat','lon').values)
+         ),
+         coords=ds.coords
+    )
+    
+    if save_output:
+        # NB filename should be 32 characters or less
+        filename = 'h' + str(int(h_0)) + 'm' + str(int(m)) + 'l' + str(int(y_min)) + 'u' + str(int(y_max))
+        print(len(filename))
+
+        zsurf.to_netcdf('/home/links/rm811/Isca/input/asymmetry/' + filename + '.nc', format="NETCDF3_CLASSIC",
+             encoding = {'zsurf': {"dtype": 'float32', '_FillValue': None},
+                    'land_mask': {"dtype": 'float32', '_FillValue': None},
+                    "lat": {'_FillValue': None}, "lon": {'_FillValue': None},
+                    "latb": {'_FillValue': None}, "lonb": {'_FillValue': None}}
+                )
+    
+    return filename
+'''
