@@ -162,7 +162,7 @@ def heat_perturb(q_0=6, m=2, y_cen=45, p_0=800, p_t=200, save_output=True):
     
     return filename
 
-def combo_heating(y_wid=25., th_mag=4., p_top = 800., p_th = 50., p_ref=800., q_0=6., m=2., y_cen=45., p_0=800., p_t=200., save_output=True):
+def combo_heating(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., q_0=6., m=2., y_cen=45., p_0=800., p_t=200., save_output=True):
     
     path = '/home/links/rm811/Isca/input/'
     file = path+'dimensions_3d.nc'
@@ -206,9 +206,9 @@ def combo_heating(y_wid=25., th_mag=4., p_top = 800., p_th = 50., p_ref=800., q_
     # 2. m - longitudinal wave number (1 or 2)
     # 3. y_cen - center of heating in latitude
     # 4. p_0 and p_t - lower and upper bounds in pressure (hPa) respectively
-    y_wid = 0.175*360/(2*np.pi)
+    y_w = 0.175*360/(2*np.pi)
 
-    heat_lat = np.exp(-0.5 * ((ds.lat - y_cen)/y_wid)**2.) * template
+    heat_lat = np.exp(-0.5 * ((ds.lat - y_cen)/y_w)**2.) * template
     heat_lon = np.cos(m * np.deg2rad(ds.lon)) * template
     heat_p = np.sin(np.pi * np.log(ds.pfull/p_0)/np.log(p_t/p_0)) * template
 
