@@ -113,7 +113,7 @@ private
 
    Logical :: sponge_flag = .false. ! flag for sponge layer at the top
    real :: sponge_pbottom = 5.e1 ! Bottom of sponge layer with zero damping (Pa)
-   real :: sponge_tau_days = 0.4 ! Sponge damping time scale (days) - changed from 0.5 to get 2.5 /days
+   real :: sponge_tau_days = 0.5 ! Sponge damping time scale (/days) - default 0.5
 
 !-----------------------------------------------------------------------
 
