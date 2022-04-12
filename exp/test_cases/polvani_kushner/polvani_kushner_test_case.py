@@ -25,9 +25,9 @@ cb.compile()  # compile the source code to working directory $GFDL_WORK/codebase
 
 # if using local heating from file:
 inputpath = 'input/asymmetry/'
-inputfile = 'q6m2y45l800u200'
+inputfile = 'w15a4p800f800g50_q6m2y45l800u200'
 
-exp_name = 'PK_e0v3z13_'+inputfile # updated experiment name
+exp_name = 'PK_e0v4z13' #+inputfile # updated experiment name
 exp = Experiment(exp_name, codebase=cb)
 
 #exp.inputfiles = [os.path.join(GFDL_BASE,'input/land_masks/era_land_t42.nc')]
@@ -61,7 +61,7 @@ exp.diag_table = diag
 # wrapped as a namelist object.
 namelist = Namelist({
     'main_nml': {
-        'dt_atmos': 600, # timestep in seconds
+        'dt_atmos': 540, # timestep in seconds - default: 600. Should divide into seconds per day.
         'days': 30, 
         'calendar': 'thirty_day',
         'current_date': [2000,1,1,0,0,0]
@@ -97,7 +97,7 @@ namelist = Namelist({
         'delv': 10.,       # lapse rate (default 10K)
         'eps': 0.,         # stratospheric latitudinal variation (default 0K) - NOTE: ±10 as per P-K paper
         'sigma_b': 0.7,    # boundary layer friction height (default p/ps = sigma = 0.7)
-        'vtx_gamma': 3.0, # experiment with different values of gamma
+        'vtx_gamma': 4.0, # experiment with different values of gamma
         'equilibrium_t_option': 'Polvani_Kushner', # add new option for polvani_kushner relaxation
         'strat_vtx': True, # default is True - set to False so that w_vtx=0 for no polar vortex
 
@@ -110,15 +110,9 @@ namelist = Namelist({
         'do_conserve_energy':   True,  # convert dissipated momentum into heat (default True)
         'sponge_flag': True,      # added sponge layer for simple damping in upper levels
 
-        # variables for polar heating
+        # variables for including heating
         'local_heating_option': 'from_file', # INCLUDE THIS FOR HEATING
         'local_heating_file': inputfile # INCLUDE THIS FOR HEATING
-        #'polar_heating_srfamp': 2., #X K/day heating
-        #'polar_heating_latwidth':   20., # in degrees 
-        #'polar_heating_latcenter':   90.,  # in degrees
-        #'polar_heating_sigwidth': 0.1,
-        #'polar_heating_sigcenter': 1.e3
-
     },
 
     'diag_manager_nml': {
