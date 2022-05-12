@@ -259,17 +259,22 @@ def plot_vertical(folder, filename):
     
     # Plot
     plt.figure(figsize=(8,6))
-    plt.contourf(lat, p, heat, cmap='Reds', levels=np.arange(0, h+inc, inc))
-    #plt.xlim(0, 90)
+    cs = plt.contourf(lat, p, heat, cmap='Reds', levels=np.arange(0, h+inc, inc))
+    cb = plt.colorbar(cs)
+    cb.set_label(label=r'Heating (K s$^{-1}$)', size='x-large')
+    cb.ax.tick_params(labelsize='x-large')
+    plt.xlabel(r'Latitude ($\degree$)', fontsize='x-large')
+    plt.xticks([0, 45, 90], ['0', '45N', '90N'])
+    plt.xlim(-20, 90)
     plt.ylim(max(p), 100)
     plt.yscale('log')
-    plt.colorbar(label="Heating (K/s)")
-    plt.xlabel(r'Latitude ($\degree$)', fontsize='x-large')
     plt.ylabel('Pressure (hPa)', fontsize='x-large')
     #plt.title(filename, fontsize='x-large')
     plt.tick_params(axis='both', labelsize = 'x-large', which='both', direction='in')
+    plt.savefig(filename+'.pdf', bbox_inches = 'tight')
+    plt.close()
 
-    return plt.show()
+    return plt.close()
 
 def plot_horizontal(folder, filename):
     
