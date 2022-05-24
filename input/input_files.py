@@ -5,6 +5,7 @@ Script that creates a file for prescribed polar heating based on Orlanski and So
 import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
+import cartopy.crs as ccrs
 
 def ideal_topo(y_min=25., y_max=65, h_0=4000., m=2., save_output=True):
     """
@@ -54,7 +55,7 @@ def ideal_topo(y_min=25., y_max=65, h_0=4000., m=2., save_output=True):
     
     return filename
 
-def polar_heating(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., save_output=True):
+def polar_heating(y_wid=15., th_mag=4., p_top = 500., p_th = 50., p_ref=800., save_output=True):
     
     # Parameter sweep
     # 1. Vary p_top - depth of forcing: 0:200:800 (1000 would be no forcing!)
@@ -87,7 +88,7 @@ def polar_heating(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., sa
         file0 = 'w15' + 'a' + str(int(th_mag)) + 'p' + str(int(p_top)) + 'f' + str(int(p_ref)) + 'g' + str(int(p_th))
         ds0 = xr.open_dataset(path + 'polar_heating/' + file0 + '.nc')
         heat0 = heat1 = 0
-        for i in range(len(ds.lat)):
+        for i in range(len(data.lat)):
             heat0 += ds0.variables[file0][-1,i,0].data
             heat1 += polar_heat.transpose('pfull','lat','lon')[-1,i,0].data
         polar_heat = polar_heat / (heat1/heat0)
@@ -163,7 +164,7 @@ def heat_perturb(q_0=6, m=2, y_cen=45, p_0=800, p_t=200, save_output=True):
     
     return filename
 
-def combo_heating(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., q_0=6., m=2., y_cen=45., p_0=800., p_t=200., save_output=True):
+def combo_heat1(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., q_0=6., m=2., y_cen=45., p_0=800., p_t=200., save_output=True):
     
     path = '/home/links/rm811/Isca/input/'
     file = path+'dimensions_3d.nc'
@@ -243,6 +244,50 @@ def combo_heating(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., q_
 
     return filename
 
+def offpole_heating(q_0=4., x_cen=75., y_cen=180., x_wid=5., y_wid=30., p_top = 800., p_th = 50., p_ref=800., save_output=True):
+    
+    # Parameters
+    # 1. q_0 - magnitude of forcing in K/day
+    # 2. x/y_cen - center of heating in latitude/longitude
+    # 3. x/y_wid - width of heating in latitude/longitude
+    # 4. Vary p_top - depth of forcing
+    # 4. Vary p_th - sets vertical gradient of forcing
+    
+    path = '/home/links/rm811/Isca/input/'
+    file = path+'dimensions_3d.nc'
+    ds = xr.open_dataset(file, decode_times=False)
+    template = ds.data * 0. + 1.
+    
+    heat_lat = np.exp(-0.5 * ((ds.lat - x_cen)/x_wid)**2.) * template
+    heat_lon = np.exp(-0.5 * ((ds.lon - y_cen)/y_wid)**2.) * template
+    heat_p = 0.5 * (1. + np.tanh((ds.pfull - p_top)/p_th)) * template
+
+    heat = q_0 * (1000. - p_ref)/(1000. - p_top) * heat_lat * heat_lon *  heat_p /86400.  # convert to K/s
+
+    coord_list = ["pfull", "lat", "lon"]
+    heat = xr.Dataset(
+         data_vars=dict(
+             heat = (coord_list, heat.transpose('pfull','lat','lon').values)
+         ),
+         coords=ds.coords
+    )
+
+    if save_output:
+        # NB filename should be 32 characters or less
+        filename = 'a' + str(int(q_0)) + 'x' + str(int(x_cen)) + 'y' + str(int(y_cen)) +\
+            'w' + str(int(x_wid)) + 'v' + str(int(y_wid)) + 'p' + str(int(p_top))
+        print(len(filename))
+        heat = heat.rename({"heat" : filename})
+        
+        heat.to_netcdf(path + 'polar_heating/' + filename + '.nc', format="NETCDF3_CLASSIC",
+             encoding = {filename: {"dtype": 'float32', '_FillValue': None},
+                    "lat": {'_FillValue': None}, "lon": {'_FillValue': None},
+                    "latb": {'_FillValue': None}, "lonb": {'_FillValue': None},
+                    "pfull": {'_FillValue': None}, "phalf": {'_FillValue': None}}
+                )
+
+    return filename
+
 def plot_vertical(folder, filename):
 
     file = '/home/links/rm811/Isca/input/' + folder + '/' + filename + '.nc'
@@ -263,20 +308,19 @@ def plot_vertical(folder, filename):
     cb = plt.colorbar(cs)
     cb.set_label(label=r'Heating (K s$^{-1}$)', size='x-large')
     cb.ax.tick_params(labelsize='x-large')
-    plt.xlabel(r'Latitude ($\degree$)', fontsize='x-large')
-    plt.xticks([0, 45, 90], ['0', '45N', '90N'])
-    plt.xlim(-20, 90)
+    plt.xlabel(r'Latitude ($\degree$N)', fontsize='x-large')
+    plt.xticks([30, 50, 70, 90], ['30', '50', '70', '90'])
+    plt.xlim(20, 90)
     plt.ylim(max(p), 100)
     plt.yscale('log')
     plt.ylabel('Pressure (hPa)', fontsize='x-large')
     #plt.title(filename, fontsize='x-large')
     plt.tick_params(axis='both', labelsize = 'x-large', which='both', direction='in')
-    plt.savefig(filename+'.pdf', bbox_inches = 'tight')
-    plt.close()
+    plt.savefig(filename+'v.pdf', bbox_inches = 'tight')
 
     return plt.close()
 
-def plot_horizontal(folder, filename):
+def plot_horizontal1(folder, filename):
     
     file = '/home/links/rm811/Isca/input/' + folder + '/' + filename + '.nc'
     ds = xr.open_dataset(file)
@@ -288,21 +332,51 @@ def plot_horizontal(folder, filename):
 
     lat = ds.coords['lat'].data
     lon = ds.coords['lon'].data
-    heat = ds.sel(pfull=500, method='nearest').variables[filename]
+    heat = ds.sel(pfull=1000, method='nearest').variables[filename]
 
     #Plot
     plt.figure(figsize=(8,6))
-    plt.contourf(lon, lat, heat, cmap='RdBu_r', levels=21)
-    plt.colorbar(label="Heating (K/s)")
+    plt.contourf(lon, lat, heat, cmap='RdBu_r', levels=np.arange(0, h+inc, inc))
+    plt.colorbar(label=r'Heating (K s$^{-1}$)')
     plt.xlabel(r'Longitude ($\degree$)', fontsize='x-large')
     plt.ylabel(r'Latitude ($\degree$)', fontsize='x-large')
     plt.title(filename, fontsize='x-large')
     plt.tick_params(axis='both', labelsize = 'x-large', which='both', direction='in')
+    plt.savefig(filename+'h1.pdf', bbox_inches = 'tight')
 
-    return plt.show()
+    return plt.close()
+
+def plot_horizontal2(folder, filename):
+    
+    file = '/home/links/rm811/Isca/input/' + folder + '/' + filename + '.nc'
+    ds = xr.open_dataset(file)
+    if folder == 'polar_heating':
+        h = int(filename.partition("a")[2][0])/86400
+    elif folder == 'asymmetry':
+        h = int(filename.partition("q")[2][0])/86400
+    inc = 0.25e-5
+
+    lat = ds.coords['lat'].data
+    lon = ds.coords['lon'].data
+    heat = ds.sel(pfull=1000, method='nearest').variables[filename]
+
+    #Plot
+    plt.figure(figsize=(8,6))
+    ax = plt.axes(projection=ccrs.NorthPolarStereo())
+    cs = plt.contourf(lon, lat, heat, cmap='RdBu_r', levels=np.arange(0, h+inc, inc), transform = ccrs.PlateCarree())
+    cb = plt.colorbar(cs, pad=0.1)
+    cb.set_label(label=r'Heating (K s$^{-1}$)', size='x-large')
+    cb.ax.tick_params(labelsize='x-large')
+    ax.coastlines()
+    ax.set_global()
+    ax.gridlines(draw_labels=True, dms=True, x_inline=False, y_inline=False)
+    ax.set_extent([-180, 180, 0, 90], crs=ccrs.PlateCarree())
+    plt.savefig(filename+'h2.pdf', bbox_inches = 'tight')
+
+    return plt.close()
 
 if __name__ == '__main__': 
-    option = input("a) polar heating, b) heating perturbation, c) idealised topography or d) combo of a and b?")
+    option = input("a) polar heat, b) heat perturb, c) idealised topography, d) combo of a and b?, e) off-pole heat, or f) combo of e and b?")
 
     H = 8
     p0 = 1000
@@ -315,9 +389,18 @@ if __name__ == '__main__':
         plot_horizontal('asymmetry', filename)
         plot_vertical('asymmetry', filename)
     elif option =='c':
-        ideal_topo()
+        filename = ideal_topo()
         #plot_horizontal('asymmetry', filename)
     elif option =='d':
-        filename = combo_heating()
+        filename = combo_heat1()
         plot_vertical('asymmetry', filename)
         plot_horizontal('asymmetry', filename)
+    elif option =='e':
+        filename = offpole_heating()
+        plot_horizontal1('polar_heating', filename)
+        plot_horizontal2('polar_heating', filename)
+        plot_vertical('polar_heating', filename)
+    #elif option =='f':
+    #    filename = combo_heat2()
+    #    plot_horizontal('asymmetry', filename)
+    #    plot_vertical('asymmetry', filename)
