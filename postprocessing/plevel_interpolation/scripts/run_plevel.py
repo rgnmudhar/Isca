@@ -7,12 +7,12 @@ import pdb
 import subprocess
 import xarray as xr # for transferring phalfs
 
-start_time=time.time()
-base_dir='$GFDL_DATA' # changed base directory
-exp_name_list = ['PK_eps0_vtx2_zoz18_1y_heat_test'] # changed experiment name
-avg_or_daily_list=['daily'] # changed for daily (otherwise 'monthly')
-start_file=1 # changed start and end no. of files
-end_file=12
+start_time = time.time()
+base_dir = str(sys.argv[1]) # changed base directory
+exp_name_list = [str(sys.argv[2])] # changed experiment name
+avg_or_daily_list = ['daily'] # changed for daily (otherwise 'monthly')
+start_file = 1 # changed start and end no. of files
+end_file = int(sys.argv[3]) #- 1 #take away 1 due to restarts folder
 nfiles=(end_file-start_file)+1
 
 do_extra_averaging=False #If true, then 6hourly data is averaged into daily data using cdo
@@ -113,5 +113,3 @@ if group_months_into_one_file:
                 join_files(nc_file_string,nc_file_out)
 
 print('execution time', time.time()-start_time)
-
-
