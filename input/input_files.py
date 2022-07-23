@@ -55,7 +55,7 @@ def ideal_topo(y_min=25., y_max=65, h_0=4000., m=2., save_output=True):
     
     return filename
 
-def polar_heating(y_wid=15., th_mag=4., p_top = 500., p_th = 50., p_ref=800., save_output=True):
+def polar_heating(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., save_output=True):
     
     # Parameter sweep
     # 1. Vary p_top - depth of forcing: 0:200:800 (1000 would be no forcing!)
@@ -294,29 +294,30 @@ def plot_vertical(folder, filename):
     ds = xr.open_dataset(file)
     if folder == 'polar_heating':
         h = int(filename.partition("a")[2][0])/86400
+        heat = ds.sel(lon=180, method='nearest').variables[filename] #.mean(dim='lon')
     elif folder == 'asymmetry':
         h = int(filename.partition("q")[2][0])/86400
-    inc = 0.5e-5
+        heat = ds.sel(lon=180, method='nearest').variables[filename]
+    inc = 0.2e-5
 
     lat = ds.coords['lat'].data
-    p = ds.coords['pfull'].data
-    heat = ds.sel(lon=180, method='nearest').variables[filename]
+    p = ds.coords['pfull'].data 
     
     # Plot
-    plt.figure(figsize=(8,6))
+    plt.figure(figsize=(5,6))
     cs = plt.contourf(lat, p, heat, cmap='Reds', levels=np.arange(0, h+inc, inc))
-    cb = plt.colorbar(cs)
-    cb.set_label(label=r'Heating (K s$^{-1}$)', size='x-large')
+    cb = plt.colorbar(cs, location='bottom')
+    cb.set_label(label=r'Heating (K s$^{-1}$)', size='xx-large')
     cb.ax.tick_params(labelsize='x-large')
-    plt.xlabel(r'Latitude ($\degree$N)', fontsize='x-large')
+    plt.xlabel(r'Latitude ($\degree$N)', fontsize='xx-large')
     plt.xticks([30, 50, 70, 90], ['30', '50', '70', '90'])
-    plt.xlim(20, 90)
+    plt.xlim(25, 90)
     plt.ylim(max(p), 100)
     plt.yscale('log')
-    plt.ylabel('Pressure (hPa)', fontsize='x-large')
+    plt.ylabel('Pressure (hPa)', fontsize='xx-large')
     #plt.title(filename, fontsize='x-large')
-    plt.tick_params(axis='both', labelsize = 'x-large', which='both', direction='in')
-    plt.savefig(filename+'v.pdf', bbox_inches = 'tight')
+    plt.tick_params(axis='both', labelsize = 'xx-large', which='both', direction='in')
+    plt.savefig(filename+'.pdf', bbox_inches = 'tight')
 
     return plt.close()
 
@@ -335,7 +336,7 @@ def plot_horizontal1(folder, filename):
     heat = ds.sel(pfull=1000, method='nearest').variables[filename]
 
     #Plot
-    plt.figure(figsize=(8,6))
+    plt.figure(figsize=(5,4))
     plt.contourf(lon, lat, heat, cmap='RdBu_r', levels=np.arange(0, h+inc, inc))
     plt.colorbar(label=r'Heating (K s$^{-1}$)')
     plt.xlabel(r'Longitude ($\degree$)', fontsize='x-large')
@@ -361,16 +362,17 @@ def plot_horizontal2(folder, filename):
     heat = ds.sel(pfull=1000, method='nearest').variables[filename]
 
     #Plot
-    plt.figure(figsize=(8,6))
+    plt.figure(figsize=(5,4))
     ax = plt.axes(projection=ccrs.NorthPolarStereo())
-    cs = plt.contourf(lon, lat, heat, cmap='RdBu_r', levels=np.arange(0, h+inc, inc), transform = ccrs.PlateCarree())
-    cb = plt.colorbar(cs, pad=0.1)
-    cb.set_label(label=r'Heating (K s$^{-1}$)', size='x-large')
-    cb.ax.tick_params(labelsize='x-large')
+    cs = plt.contourf(lon, lat, heat, cmap='Reds', levels=np.arange(0, h+inc, inc), transform = ccrs.PlateCarree())
+    #cb = plt.colorbar(cs, pad=0.1)
+    #cb.set_label(label=r'Heating (K s$^{-1}$)', size='x-large')
+    #cb.ax.tick_params(labelsize='x-large')
     ax.coastlines()
     ax.set_global()
     ax.gridlines(draw_labels=True, dms=True, x_inline=False, y_inline=False)
-    ax.set_extent([-180, 180, 0, 90], crs=ccrs.PlateCarree())
+    ax.set_extent([-180, 180, 0, 45], crs=ccrs.PlateCarree())
+    ax.set_xticklabels('')
     plt.savefig(filename+'h2.pdf', bbox_inches = 'tight')
 
     return plt.close()
@@ -386,7 +388,7 @@ if __name__ == '__main__':
         plot_vertical('polar_heating', filename)
     elif option =='b':
         filename = heat_perturb()
-        plot_horizontal('asymmetry', filename)
+        plot_horizontal1('asymmetry', filename)
         plot_vertical('asymmetry', filename)
     elif option =='c':
         filename = ideal_topo()
@@ -394,13 +396,13 @@ if __name__ == '__main__':
     elif option =='d':
         filename = combo_heat1()
         plot_vertical('asymmetry', filename)
-        plot_horizontal('asymmetry', filename)
+        plot_horizontal1('asymmetry', filename)
     elif option =='e':
         filename = offpole_heating()
-        plot_horizontal1('polar_heating', filename)
+        #plot_horizontal1('polar_heating', filename)
         plot_horizontal2('polar_heating', filename)
         plot_vertical('polar_heating', filename)
     #elif option =='f':
     #    filename = combo_heat2()
-    #    plot_horizontal('asymmetry', filename)
+    #    plot_horizontal1('asymmetry', filename)
     #    plot_vertical('asymmetry', filename)
