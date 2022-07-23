@@ -4,10 +4,10 @@ import sys
 import os
 import time
 
-def main(base_dir, exp_name, end_file):
+def main(base_dir, exp_name_list, end_file):
     start_time = time.time()
     avg_or_daily_list = ['daily'] # changed for daily (otherwise 'monthly')
-    exp_name_list = [exp_name]
+    #exp_name_list = [exp_name]
     start_file = 1 # changed start and end no. of files
     nfiles=(end_file-start_file)+1
 
@@ -111,4 +111,6 @@ def main(base_dir, exp_name, end_file):
     return print('execution time', time.time()-start_time)
 
 if __name__ == "__main__":
-    main(str(sys.argv[1]), str(sys.argv[2]), int(sys.argv[3]))
+    exp_name_list = ['PK_e0v1z18'] 
+    main('/disco/share/rm811/isca_data/', exp_name_list, 84) 
+    #main(str(sys.argv[1]), str(sys.argv[2]), int(sys.argv[3]))
