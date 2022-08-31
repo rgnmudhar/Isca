@@ -24,16 +24,15 @@ cb.compile()  # compile the source code to working directory $GFDL_WORK/codebase
 # and output diagnostics
 
 # if using local heating from file:
-inputpath1 = 'input/polar_heating/' # INCLUDE THIS FOR HEATING
-inputfile1 = 'w15a4p800f800g50' # INCLUDE THIS FOR HEATING
-#inputpath2 = 'input/asymmetry/' # INCLUDE THIS FOR TOPOGRAPHY
+inputpath1 = 'input/asymmetry/' # INCLUDE THIS FOR HEATING
+inputfile1 = 'w35a4p800f800g50_q6m2y45l800u200' # INCLUDE THIS FOR HEATING
+#inputpath2 = 'input/asymmetry/'  # INCLUDE THIS FOR TOPOGRAPHY
 #inputfile2 = 'h4000m2l25u65' # INCLUDE THIS FOR TOPOGRAPHY
 
-exp_name = 'PK_e0v4z13_'+inputfile1 # updated experiment name
+exp_name = 'PK_e0v4z13_'+inputfile1 #+'_'+inputfile2 # updated experiment name
 exp = Experiment(exp_name, codebase=cb)
 
-exp.inputfiles = [os.path.join(GFDL_BASE,inputpath1+inputfile1+'.nc')] # INCLUDE THIS FOR HEATING
-#exp.inputfiles = [os.path.join(GFDL_BASE,inputpath2+inputfile2+'.nc')] # INCLUDE THIS FOR TOPOGRAPHY
+exp.inputfiles = [os.path.join(GFDL_BASE,inputpath1+inputfile1+'.nc')] #, os.path.join(GFDL_BASE,inputpath2+inputfile2+'.nc')] # INCLUDE THIS FOR HEATING/TOPOGRAPHY
 
 #Tell model how to write diagnostics
 diag = DiagTable()
@@ -44,8 +43,8 @@ diag.add_file('atmos_daily', 1, 'days', time_units='days') # added output of dai
 diag.add_field('dynamics', 'ps', time_avg=True)
 diag.add_field('dynamics', 'sphum', time_avg=True) # added diagnostic field for plevel_interp
 diag.add_field('dynamics', 'zsurf') # added diagnostic field for plevel_interp - zsurf is static so can't get time average
-#diag.add_field('dynamics', 'bk')
-#diag.add_field('dynamics', 'pk')
+diag.add_field('dynamics', 'bk') # required diagnostic field for plevel_interp
+diag.add_field('dynamics', 'pk') # required diagnostic field for plevel_interp
 diag.add_field('dynamics', 'ucomp', time_avg=True)
 diag.add_field('dynamics', 'vcomp', time_avg=True)
 diag.add_field('dynamics', 'omega', time_avg=True) # added diagnostic field for w
@@ -63,7 +62,7 @@ exp.diag_table = diag
 # wrapped as a namelist object.
 namelist = Namelist({
     'main_nml': {
-        'dt_atmos': 600, # timestep in seconds - default: 600. Should divide into seconds per day.
+        'dt_atmos': 360, # timestep in seconds - default: 600. Should divide into seconds per day.
         'days': 30, 
         'calendar': 'thirty_day',
         'current_date': [2000,1,1,0,0,0]
@@ -87,7 +86,7 @@ namelist = Namelist({
     },
 
     #'spectral_init_cond_nml': { # namelist required for topography added - INCLUDE THIS FOR TOPOGRAPHY
-    #    'topog_file_name': inputfile2+'.nc', #input file name
+    #   'topog_file_name': inputfile2+'.nc', #input file name
     #    'topography_option': 'input' # take topography from input file
     #},
 
