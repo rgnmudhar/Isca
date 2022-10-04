@@ -24,15 +24,16 @@ cb.compile()  # compile the source code to working directory $GFDL_WORK/codebase
 # and output diagnostics
 
 # if using local heating from file:
-inputpath1 = 'input/asymmetry/' # INCLUDE THIS FOR HEATING
-inputfile1 = 'w35a4p800f800g50_q6m2y45l800u200' # INCLUDE THIS FOR HEATING
+inputpath1 = 'input/polar_heating/' # INCLUDE THIS FOR HEATING
+inputfile1 = 'a11x75y180w5v45p800' # INCLUDE THIS FOR HEATING
 #inputpath2 = 'input/asymmetry/'  # INCLUDE THIS FOR TOPOGRAPHY
 #inputfile2 = 'h4000m2l25u65' # INCLUDE THIS FOR TOPOGRAPHY
 
 exp_name = 'PK_e0v4z13_'+inputfile1 #+'_'+inputfile2 # updated experiment name
 exp = Experiment(exp_name, codebase=cb)
 
-exp.inputfiles = [os.path.join(GFDL_BASE,inputpath1+inputfile1+'.nc')] #, os.path.join(GFDL_BASE,inputpath2+inputfile2+'.nc')] # INCLUDE THIS FOR HEATING/TOPOGRAPHY
+exp.inputfiles = [os.path.join(GFDL_BASE,inputpath1+inputfile1+'.nc')] #,\
+                    #os.path.join(GFDL_BASE,inputpath2+inputfile2+'.nc')] # INCLUDE THIS FOR HEATING/TOPOGRAPHY
 
 #Tell model how to write diagnostics
 diag = DiagTable()
@@ -109,7 +110,7 @@ namelist = Namelist({
 
         'z_ozone': 13.,     # added height of stratospheric heating source
         'do_conserve_energy':   True,  # convert dissipated momentum into heat (default True)
-        'sponge_flag': True ,      # added sponge layer for simple damping in upper levels
+        'sponge_flag': True,      # added sponge layer for simple damping in upper levels
 
         # variables for including heating
         'local_heating_option': 'from_file', # INCLUDE THIS FOR HEATING
