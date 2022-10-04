@@ -246,7 +246,7 @@ def combo_heat1(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., q_0=
 
     return filename
 
-def offpole_heating(q_0=4., x_cen=75., y_cen=0., x_wid=5., y_wid=30., p_top = 800., p_th = 50., p_ref=800., save_output=True):
+def offpole_heating(q_0=11.5, x_cen=75., y_cen=180., x_wid=5., y_wid=45., p_top = 800., p_th = 50., p_ref=800., save_output=True):
     
     # Parameters
     # 1. q_0 - magnitude of forcing in K/day
@@ -292,7 +292,7 @@ def offpole_heating(q_0=4., x_cen=75., y_cen=0., x_wid=5., y_wid=30., p_top = 80
 
     return filename
 
-def combo_heat2(q_0=4., x_cen=75., y_cen=300., x_wid=5., y_wid=30., p_top = 800., p_th = 50., p_ref=800., q_0_2=6., m=2., y_cen_2=45., p_0=800., p_t=200., save_output=True):
+def combo_heat2(q_0=4., x_cen=75., y_cen=180., x_wid=5., y_wid=30., p_top = 800., p_th = 50., p_ref=800., q_0_2=6., m=2., y_cen_2=45., p_0=800., p_t=200., save_output=True):
     
     ds, template = set_up("3d")
 
@@ -369,20 +369,20 @@ def plot_vertical(folder, filename):
     elif folder == 'asymmetry':
         h = int(filename.partition("q")[2][0])/86400
         heat = ds.sel(lon=180, method='nearest').variables[filename]
-    inc = 0.2e-5
+    inc = 0.5e-5
 
     lat = ds.coords['lat'].data
     p = ds.coords['pfull'].data 
     
     # Plot
-    plt.figure(figsize=(5,6))
+    plt.figure(figsize=(6,6))
     cs = plt.contourf(lat, p, heat, cmap='Reds', levels=np.arange(0, h+inc, inc))
-    cb = plt.colorbar(cs, location='bottom')
+    cb = plt.colorbar(cs, location='right')
     cb.set_label(label=r'Heating (K s$^{-1}$)', size='xx-large')
-    cb.ax.tick_params(labelsize='x-large')
+    cb.ax.tick_params(labelsize='xx-large')
     plt.xlabel(r'Latitude ($\degree$N)', fontsize='xx-large')
-    plt.xticks([30, 50, 70, 90], ['30', '50', '70', '90'])
-    plt.xlim(25, 90)
+    plt.xticks([10, 30, 50, 70, 90], ['10', '30', '50', '70', '90'])
+    plt.xlim(0, 90)
     plt.ylim(max(p), 100)
     plt.yscale('log')
     plt.ylabel('Pressure (hPa)', fontsize='xx-large')
@@ -431,13 +431,13 @@ def plot_horizontal2(folder, filename):
     lat = ds.coords['lat'].data
     lon = ds.coords['lon'].data
     heat_surf = ds.sel(pfull=1000, method='nearest').variables[filename]
-    heat_upper = ds.sel(pfull=400, method='nearest').variables[filename]
+    #heat_upper = ds.sel(pfull=400, method='nearest').variables[filename]
 
     #Plot
     plt.figure(figsize=(5,4))
     ax = plt.axes(projection=ccrs.NorthPolarStereo())
     cs = plt.contourf(lon, lat, heat_surf, cmap='Reds', levels=np.arange(0, h+inc, inc), transform = ccrs.PlateCarree())
-    cs = plt.contour(lon, lat, heat_upper, colors = 'k', alpha = 0.4, levels=11, transform = ccrs.PlateCarree())
+    #ct = plt.contour(lon, lat, heat_upper, colors = 'k', alpha = 0.4, levels=11, transform = ccrs.PlateCarree())
     #cb = plt.colorbar(cs, pad=0.1)
     #cb.set_label(label=r'Heating (K s$^{-1}$)', size='x-large')
     #cb.ax.tick_params(labelsize='x-large')
@@ -451,7 +451,7 @@ def plot_horizontal2(folder, filename):
     return plt.close()
 
 if __name__ == '__main__': 
-    option = input("a) polar heat, b) heat perturb, c) idealised topography, d) combo of a and b?, e) off-pole heat, or f) combo of e and b?")
+    option = input("a) polar heat, b) heat perturb, c) idealised topography, d) combo of a and b?, e) off-pole heat, f) combo of e and b, or g) combo of a and c?")
 
     H = 8
     p0 = 1000
@@ -479,5 +479,8 @@ if __name__ == '__main__':
     elif option =='f':
         filename = combo_heat2()
         #plot_horizontal1('polar_heating', filename)
-        #plot_horizontal2('asymmetry', filename)
-        #plot_vertical('asymmetry', filename)
+        plot_horizontal2('asymmetry', filename)
+        plot_vertical('asymmetry', filename)
+    elif option =='g':
+        filename = combo_topo()
+        plot_horizontal1('asymmetry', filename)
