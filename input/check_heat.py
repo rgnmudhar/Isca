@@ -62,6 +62,7 @@ def integration_levels(filenames, level):
     for i in range(n):
        lat, lon, p, heat = open_heat_static(filenames[i])
        int1.append(surf_integrate(heat, lon, p))
+       coslat = np.cos(np.deg2rad(lat.data))
 
     int2 = []
     for i in range(n):
@@ -149,6 +150,6 @@ labels = ['default', r'$p_{top} = 600$ hPa', r'$p_{top} = 400$ hPa', r'$\phi_{w}
 #    r'$\phi_{w}=15\degree$', r'$\theta_{w}=45\degree$', r'$A=11.5$ K day$^{-1}$, $\theta_{w}=45\degree$']
 colors = ['k', '#B30000', '#FF9900', '#FFCC00', '#00B300', '#0099CC', '#4D0099', '#CC0080']
 
-#plot_vslat(filenames, labels, colors)
-#plot_vsdefault(filenames, labels, colors)
-plot_multiheat()
+plot_vslat(filenames, labels, colors)
+plot_vsdefault(filenames, labels, colors)
+#plot_multiheat()
