@@ -143,13 +143,13 @@ def plot_multiheat():
     return plt.close()
 
 folder = 'polar_heating'
-filenames = ['w15a4p800f800g50', 'w15a4p600f800g50', 'w15a4p400f800g50', 'w25a4p800f800g50', 'w30a4p800f800g50', 'w15a2p800f800g50', 'w15a8p800f800g50', 'a4x75y180w5v30p800']
-labels = ['default', r'$p_{top} = 600$ hPa', r'$p_{top} = 400$ hPa', r'$\phi_{w} = 25 \degree$', r'$\phi_{w} = 30 \degree$', r'$A = 2$ K day$^{-1}$', r'$A = 8$ K day$^{-1}$', 'off-pole']
-#filenames = ['w15a4p800f800g50', 'a4x75y180w5v30p800', 'a4x75y180w5v30p400', 'a8x75y180w5v30p800', 'a4x75y180w15v30p800', 'a4x75y180w5v45p800', 'a11x75y180w5v45p800']
-#labels = ['default pole-centered heat', 'default off-pole', r'$p_{top}=400$ hPa', r'$A=8$ K day$^{-1}$',\
-#    r'$\phi_{w}=15\degree$', r'$\theta_{w}=45\degree$', r'$A=11.5$ K day$^{-1}$, $\theta_{w}=45\degree$']
+#filenames = ['w15a4p800f800g50', 'w15a4p600f800g50', 'w15a4p400f800g50', 'w25a4p800f800g50', 'w30a4p800f800g50', 'w15a2p800f800g50', 'w15a8p800f800g50', 'a4x75y180w5v30p800']
+#labels = ['default', r'$p_{top} = 600$ hPa', r'$p_{top} = 400$ hPa', r'$\phi_{w} = 25 \degree$', r'$\phi_{w} = 30 \degree$', r'$A = 2$ K day$^{-1}$', r'$A = 8$ K day$^{-1}$', 'off-pole']
+filenames = ['w15a4p800f800g50', 'a4x75y180w5v30p800', 'a4x75y180w5v30p400', 'a8x75y180w5v30p800', 'a4x75y180w15v30p800', 'a4x60y180w15v30p800', 'a11x75y180w5v45p800']
+labels = ['default pole-centered heat', 'default off-pole', r'$p_{top}=400$ hPa', r'$A=8$ K day$^{-1}$',\
+    r'$\phi_{w}=15\degree$', r'$\phi_0=60\degree$, $\phi_{w}=15\degree$', r'$A=11.5$ K day$^{-1}$, $\lambda_{w}=45\degree$']
 colors = ['k', '#B30000', '#FF9900', '#FFCC00', '#00B300', '#0099CC', '#4D0099', '#CC0080']
 
-plot_vslat(filenames, labels, colors)
+data = plot_vslat(filenames, labels, colors)
 plot_vsdefault(filenames, labels, colors)
 #plot_multiheat()
