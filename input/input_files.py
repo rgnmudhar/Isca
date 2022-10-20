@@ -246,7 +246,7 @@ def combo_heat1(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., q_0=
 
     return filename
 
-def offpole_heating(q_0=11.5, x_cen=75., y_cen=180., x_wid=5., y_wid=45., p_top = 800., p_th = 50., p_ref=800., save_output=True):
+def offpole_heating(q_0=4., x_cen=75., y_cen=180., x_wid=5., y_wid=30., p_top = 800., p_th = 50., p_ref=800., save_output=True):
     
     # Parameters
     # 1. q_0 - magnitude of forcing in K/day
@@ -423,7 +423,7 @@ def plot_horizontal2(folder, filename):
     file = '/home/links/rm811/Isca/input/' + folder + '/' + filename + '.nc'
     ds = xr.open_dataset(file)
     if folder == 'polar_heating':
-        h = int(filename.partition("a")[2][0])/86400
+        h = int(filename.partition("a")[2][0])/86400 #int(filename.partition("a")[2][:2])/86400
     elif folder == 'asymmetry':
         h = int(filename.partition("q")[2][0])/86400
     inc = 0.25e-5
@@ -438,9 +438,9 @@ def plot_horizontal2(folder, filename):
     ax = plt.axes(projection=ccrs.NorthPolarStereo())
     cs = plt.contourf(lon, lat, heat_surf, cmap='Reds', levels=np.arange(0, h+inc, inc), transform = ccrs.PlateCarree())
     #ct = plt.contour(lon, lat, heat_upper, colors = 'k', alpha = 0.4, levels=11, transform = ccrs.PlateCarree())
-    #cb = plt.colorbar(cs, pad=0.1)
-    #cb.set_label(label=r'Heating (K s$^{-1}$)', size='x-large')
-    #cb.ax.tick_params(labelsize='x-large')
+    cb = plt.colorbar(cs, pad=0.1)
+    cb.set_label(label=r'Heating (K s$^{-1}$)', size='x-large')
+    cb.ax.tick_params(labelsize='x-large')
     ax.coastlines()
     ax.set_global()
     ax.gridlines(draw_labels=True, dms=True, x_inline=False, y_inline=False)
