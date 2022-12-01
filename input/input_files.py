@@ -23,33 +23,37 @@ def set_up(type):
         template = ds.ozone_1990 * 0. + 1.
     return ds, template
 
-def scaling(ds, filename, polar_heat_unscaled, th_mag, p_top, p_ref, p_th):
+def scaling(ds, folder, file0, filename, polar_heat_unscaled, coord_list, coords):
     # scales strength of heating for different widths of heating vs. y_wid = 15 case
     # requires there to already be a file with all the same parameters except y_wid = 15
     print("scaling")
-    file0 = 'w15' + 'a' + str(int(th_mag)) + 'p' + str(int(p_top)) + 'f' + str(int(p_ref)) + 'g' + str(int(p_th))
     filenames = [file0, filename]
-    lev = integration_levels(filenames, 'full')[2]
+    lev = integration_levels([folder, folder], filenames, 'full')[2]
     r = ratio(lev[0], lev[1])
     polar_heat_scaled = polar_heat_unscaled / r
 
-    coord_list = ["pfull", "lat", "lon"]
-    polar_heat_scaled = xr.Dataset(
-        data_vars=dict(
-            polar_heat_scaled = (coord_list, polar_heat_scaled.transpose('pfull','lat','lon').values)
-        ),
-        coords=ds.coords
+    filename = filename+'_s'
+    save_heat(polar_heat_scaled, folder, filename, coord_list, coords)
+
+    return filename
+
+def save_heat(field, folder, filename, coord_list, coords):
+    print("saving")
+    field = xr.Dataset(
+         data_vars=dict(
+             field = (coord_list, field.transpose('pfull','lat','lon').values)
+         ),
+         coords=coords
     )
+
+    field = field.rename({"field" : filename})
         
-    polar_heat_scaled = polar_heat_scaled.rename({"polar_heat_scaled" : filename+'_scaled'})
-            
-    polar_heat_scaled.to_netcdf(path + 'polar_heating/' + filename+'_scaled' + '.nc', format="NETCDF3_CLASSIC",
-        encoding = {filename+'_scaled': {"dtype": 'float32', '_FillValue': None},
+    field.to_netcdf(path + folder + filename + '.nc', format="NETCDF3_CLASSIC",
+            encoding = {filename: {"dtype": 'float32', '_FillValue': None},
                 "lat": {'_FillValue': None}, "lon": {'_FillValue': None},
                 "latb": {'_FillValue': None}, "lonb": {'_FillValue': None},
                 "pfull": {'_FillValue': None}, "phalf": {'_FillValue': None}}
-        ) 
-    return filename+'_scaled'
+            )
 
 def ideal_topo(y_min=25., y_max=65, h_0=6000., m=2., save_output=True):
     """
@@ -96,7 +100,7 @@ def ideal_topo(y_min=25., y_max=65, h_0=6000., m=2., save_output=True):
     
     return filename
 
-def polar_heating(y_wid=15., th_mag=4., p_th = 50., p_top=800., p_ref=800., save_output=True):
+def polar_heating(y_wid=20., th_mag=4., p_th = 50., p_top=800., p_ref=800., save_output=True):
     
     # Parameter sweep
     # 1. Vary p_top - depth of forcing: 0:200:800 (1000 would be no forcing!)
@@ -104,6 +108,8 @@ def polar_heating(y_wid=15., th_mag=4., p_th = 50., p_top=800., p_ref=800., save
     # 3. Vary y_wid - decay of forcing away from pole (10., 15., 20.)
     # 4. Vary p_th - sets vertical gradient of forcing at cap (25.,50.,75.) Sensitivity check that steepness of transition doesn't cause unexpected behaviour
     ds, template = set_up("ozone")
+    coord_list = ["pfull", "lat", "lon"]
+    coords = ds.coords
     
     # Vary with latitude in similar way to Orlanski and Solman 2010
     #heat_lat = np.exp(-((data.lat - 90.)/y_wid)**2.) + np.exp(-((data.lat + 90.)/y_wid)**2.) * template
@@ -117,30 +123,16 @@ def polar_heating(y_wid=15., th_mag=4., p_th = 50., p_top=800., p_ref=800., save
     else:
         polar_heat = 0.5 * th_mag * (1000. - p_ref)/(1000. - p_top) * heat_lat * (1. + np.tanh((ds.pfull - p_top)/p_th)) /86400.
         polar_heat_unscaled = polar_heat # for scaling (if needed)
-
-    coord_list = ["pfull", "lat", "lon"]
-    polar_heat = xr.Dataset(
-         data_vars=dict(
-             polar_heat = (coord_list, polar_heat.transpose('pfull','lat','lon').values)
-         ),
-         coords=ds.coords
-    )
-
+    
     if save_output:
         # NB filename should be 32 characters or less
         filename = 'w' + str(int(y_wid)) + 'a' + str(int(th_mag)) + 'p' + str(int(p_top)) + 'f' + str(int(p_ref)) + 'g' + str(int(p_th))
         print(len(filename))
-        polar_heat = polar_heat.rename({"polar_heat" : filename})
-        
-        polar_heat.to_netcdf(path + 'polar_heating/' + filename + '.nc', format="NETCDF3_CLASSIC",
-             encoding = {filename: {"dtype": 'float32', '_FillValue': None},
-                    "lat": {'_FillValue': None}, "lon": {'_FillValue': None},
-                    "latb": {'_FillValue': None}, "lonb": {'_FillValue': None},
-                    "pfull": {'_FillValue': None}, "phalf": {'_FillValue': None}}
-                )    
+        save_heat(polar_heat, 'polar_heating/', filename, coord_list, coords)
+
 
     if int(y_wid) != 15:
-        filename = scaling(ds, filename, polar_heat_unscaled, th_mag, p_top, p_ref, p_th)   
+        filename = scaling(ds, 'polar_heating/', 'w15' + filename[3:], filename, polar_heat_unscaled, coord_list, coords)   
 
     return filename
 
@@ -158,6 +150,8 @@ def heat_perturb(q_0=6, m=2, y_cen=45, p_0=800, p_t=200, save_output=True):
     y_wid = 0.175*360/(2*np.pi)
 
     ds, template = set_up("3d")
+    coord_list = ["pfull", "lat", "lon"]
+    coords = ds.coords
     heat_lat = np.exp(-0.5 * ((ds.lat - y_cen)/y_wid)**2.) * template
     heat_lon = np.cos(m * np.deg2rad(ds.lon)) * template
     heat_p = np.sin(np.pi * np.log(ds.pfull/p_0)/np.log(p_t/p_0)) * template
@@ -166,32 +160,20 @@ def heat_perturb(q_0=6, m=2, y_cen=45, p_0=800, p_t=200, save_output=True):
     heat = heat.where(heat['pfull']<p_0, 0)
     heat = heat.where(heat['pfull']>p_t, 0)
 
-    coord_list = ["pfull", "lat", "lon"]
-    heat = xr.Dataset(
-         data_vars=dict(
-             heat = (coord_list, heat.transpose('pfull','lat','lon').values)
-         ),
-         coords=ds.coords
-    )
-    
+   
     if save_output:
         # NB filename should be 32 characters or less
         filename = 'q' + str(int(q_0)) + 'm' + str(int(m)) + 'y' + str(int(y_cen)) + 'l' + str(int(p_0)) + 'u' + str(int(p_t))
         print(len(filename))
-        heat = heat.rename({"heat" : filename})
-
-        heat.to_netcdf('/home/links/rm811/Isca/input/asymmetry/' + filename + '.nc', format="NETCDF3_CLASSIC",
-             encoding = {filename: {"dtype": 'float32', '_FillValue': None},
-                    "lat": {'_FillValue': None}, "lon": {'_FillValue': None},
-                    "latb": {'_FillValue': None}, "lonb": {'_FillValue': None},
-                    "pfull": {'_FillValue': None}, "phalf": {'_FillValue': None}}
-                )
+        save_heat(heat, 'asymmetry/', filename, coord_list, coords)
     
     return filename
 
-def combo_heat1(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., q_0=6., m=2., y_cen=45., p_0=800., p_t=200., save_output=True):
+def combo_heat1(y_wid=30., th_mag=4., p_top = 800., p_th = 50., p_ref=800., q_0=6., m=2., y_cen=45., p_0=800., p_t=200., save_output=True):
     
     ds, template = set_up("3d")
+    coord_list = ["pfull", "lat", "lon"]
+    coords = ds.coords
 
     # Start with polar heating
     # Parameters
@@ -211,18 +193,17 @@ def combo_heat1(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., q_0=
         polar_heat = th_mag * (1000. - p_ref)/1000. * heat_lat /86400.
     else:
         polar_heat = 0.5 * th_mag * (1000. - p_ref)/(1000. - p_top) * heat_lat * (1. + np.tanh((ds.pfull - p_top)/p_th)) /86400.
-        
+        polar_heat_unscaled = polar_heat # for scaling (if needed)
+    
+    # NB filename should be 32 characters or less
+    filename = 'w' + str(int(y_wid)) + 'a' + str(int(th_mag)) + 'p' + str(int(p_top)) + 'f' + str(int(p_ref)) + 'g' + str(int(p_th)) +\
+                '_q' + str(int(q_0)) + 'm' + str(int(m)) + 'y' + str(int(y_cen))
+    print(len(filename))
+    save_heat(polar_heat_unscaled, 'asymmetry/', filename, coord_list, coords)
+
     if int(y_wid) != 15:
-        # scales strength of heating for different widths of heating vs. y_wid = 15 case
-        # requires there to already be a file with all the same parameters except y_wid = 15
-        print("scaling")
-        file0 = 'w15' + 'a' + str(int(th_mag)) + 'p' + str(int(p_top)) + 'f' + str(int(p_ref)) + 'g' + str(int(p_th))
-        ds0 = xr.open_dataset(path + 'polar_heating/' + file0 + '.nc')
-        heat0 = heat1 = 0
-        for i in range(len(ds.lat)):
-            heat0 += ds0.variables[file0][-1,i,0].data
-            heat1 += polar_heat.transpose('pfull','lat','lon')[-1,i,0].data
-        polar_heat = polar_heat / (heat1/heat0)
+        filename = scaling(ds, 'asymmetry/', 'w15' + filename[3:], filename, polar_heat_unscaled, coord_list, coords)
+        polar_heat = xr.open_dataset(path + 'asymmetry/' + filename + '.nc').variables[filename]
 
     # Now do zonally asymmetric heat perturbation
     # Parameters
@@ -240,33 +221,11 @@ def combo_heat1(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., q_0=
     heat = heat.where(heat['pfull']<p_0, 0)
     heat = heat.where(heat['pfull']>p_t, 0)
 
-    combo_heat = polar_heat + heat
-
-    coord_list = ["pfull", "lat", "lon"]
-    combo_heat = xr.Dataset(
-         data_vars=dict(
-             combo_heat = (coord_list, combo_heat.transpose('pfull','lat','lon').values)
-         ),
-         coords=ds.coords
-    )
-
-    if save_output:
-        # NB filename should be 32 characters or less
-        filename = 'w' + str(int(y_wid)) + 'a' + str(int(th_mag)) + 'p' + str(int(p_top)) + 'f' + str(int(p_ref)) + 'g' + str(int(p_th)) +\
-            '_' 'q' + str(int(q_0)) + 'm' + str(int(m)) + 'y' + str(int(y_cen)) + 'l' + str(int(p_0)) + 'u' + str(int(p_t))
-        print(len(filename))
-        combo_heat = combo_heat.rename({"combo_heat" : filename})
-        
-        combo_heat.to_netcdf(path + 'asymmetry/' + filename + '.nc', format="NETCDF3_CLASSIC",
-             encoding = {filename: {"dtype": 'float32', '_FillValue': None},
-                    "lat": {'_FillValue': None}, "lon": {'_FillValue': None},
-                    "latb": {'_FillValue': None}, "lonb": {'_FillValue': None},
-                    "pfull": {'_FillValue': None}, "phalf": {'_FillValue': None}}
-                )    
+    save_heat(polar_heat + heat, 'asymmetry/', filename, coord_list, coords)  
 
     return filename
 
-def offpole_heating(q_0=4., x_cen=75., y_cen=180., x_wid=5., y_wid=30., p_top = 800., p_th = 50., p_ref=800., save_output=True):
+def offpole_heating(q_0=4., x_cen=75., y_cen=270., x_wid=5., y_wid=30., p_top = 800., p_th = 50., p_ref=800., save_output=True):
     
     # Parameters
     # 1. q_0 - magnitude of forcing in K/day
@@ -275,7 +234,10 @@ def offpole_heating(q_0=4., x_cen=75., y_cen=180., x_wid=5., y_wid=30., p_top = 
     # 4. Vary p_top - depth of forcing
     # 4. Vary p_th - sets vertical gradient of forcing
     
-    ds, template = set_up("3d")    
+    ds, template = set_up("3d")
+    coord_list = ["pfull", "lat", "lon"]
+    coords = ds.coords
+
     heat_lat = np.exp(-0.5 * ((ds.lat - x_cen)/x_wid)**2.) * template
     heat_lon = np.exp(-0.5 * ((ds.lon - y_cen)/y_wid)**2.) * template
     if y_cen == 0.:
@@ -285,30 +247,17 @@ def offpole_heating(q_0=4., x_cen=75., y_cen=180., x_wid=5., y_wid=30., p_top = 
     heat_p = 0.5 * (1. + np.tanh((ds.pfull - p_top)/p_th)) * template
 
     heat = q_0 * (1000. - p_ref)/(1000. - p_top) * heat_lat * heat_lon *  heat_p /86400.  # convert to K/s
-
-    # APPLY SCALING?
-
-    coord_list = ["pfull", "lat", "lon"]
-    heat = xr.Dataset(
-         data_vars=dict(
-             heat = (coord_list, heat.transpose('pfull','lat','lon').values)
-         ),
-         coords=ds.coords
-    )
+    heat_unscaled = heat
 
     if save_output:
         # NB filename should be 32 characters or less
         filename = 'a' + str(int(q_0)) + 'x' + str(int(x_cen)) + 'y' + str(int(y_cen)) +\
             'w' + str(int(x_wid)) + 'v' + str(int(y_wid)) + 'p' + str(int(p_top))
         print(len(filename))
-        heat = heat.rename({"heat" : filename})
-        
-        heat.to_netcdf(path + 'polar_heating/' + filename + '.nc', format="NETCDF3_CLASSIC",
-             encoding = {filename: {"dtype": 'float32', '_FillValue': None},
-                    "lat": {'_FillValue': None}, "lon": {'_FillValue': None},
-                    "latb": {'_FillValue': None}, "lonb": {'_FillValue': None},
-                    "pfull": {'_FillValue': None}, "phalf": {'_FillValue': None}}
-                )
+        save_heat(heat, 'asymmetry/', filename, coord_list, coords)
+
+    filename = scaling(ds, 'asymmetry/', 'w15a4p800f800g50', filename, heat_unscaled, coord_list, coords)
+    print(filename)
 
     return filename
 
@@ -387,8 +336,9 @@ def plot_vertical(folder, filename):
         h = int(filename.partition("a")[2][0])/86400
         heat = ds.sel(lon=180, method='nearest').variables[filename] #.mean(dim='lon')
     elif folder == 'asymmetry':
-        h = int(filename.partition("q")[2][0])/86400
-        heat = ds.sel(lon=180, method='nearest').variables[filename]
+        h = max(int(filename.partition("q")[2][0])/86400, int(filename.partition("a")[2][0])/86400)
+        #h = int(filename.partition("a")[2][0])/86400 * 3
+        heat = ds.sel(lon=0, method='nearest').variables[filename]
     inc = 0.5e-5
 
     lat = ds.coords['lat'].data
@@ -445,7 +395,8 @@ def plot_horizontal2(folder, filename):
     if folder == 'polar_heating':
         h = int(filename.partition("a")[2][0])/86400 #int(filename.partition("a")[2][:2])/86400
     elif folder == 'asymmetry':
-        h = int(filename.partition("q")[2][0])/86400
+        h = int(filename.partition("a")[2][0])/86400 * 3
+        #h = max(int(filename.partition("q")[2][0])/86400, int(filename.partition("a")[2][0])/86400)
     inc = 0.25e-5
 
     lat = ds.coords['lat'].data
@@ -493,9 +444,8 @@ if __name__ == '__main__':
         plot_horizontal1('asymmetry', filename)
     elif option =='e':
         filename = offpole_heating()
-        #plot_horizontal1('polar_heating', filename)
-        plot_horizontal2('polar_heating', filename)
-        plot_vertical('polar_heating', filename)
+        plot_horizontal2('asymmetry', filename)
+        #plot_vertical('asymmetry', filename)
     elif option =='f':
         filename = combo_heat2()
         #plot_horizontal1('polar_heating', filename)
