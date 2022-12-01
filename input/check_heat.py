@@ -12,23 +12,18 @@ from aostools.constants import *
 def open_heat_static(filename):
     file = '/home/links/rm811/Isca/input/' + folder + '/' + filename + '.nc'
     ds = xr.open_dataset(file)
-    lat = ds.lat.data
-    lon = ds.lon.data
-    p = ds.pfull.data
+    lon = ds.lon
     heat = ds.variables[filename].transpose('lat','lon','pfull')
-    return lat, lon, p, heat
+    return lon, heat
 
 def open_heat_evolution(filename):
     folder = '/disco/share/rm811/isca_data/PK_e0v4z13_' + filename
     files = sorted(glob(folder+'/run*/*.nc'))
     files_subset = files[:12]
     ds = xr.open_mfdataset(files_subset)
-    lat = ds.lat.data
-    lon = ds.lon.data
-    p = ds.pfull.data
     t = ds.time.data
     heat = ds.local_heating
-    return lat, lon, p, t, heat
+    return t, heat
 
 def diff(heat, var):
     return heat.differentiate(var, edge_order=2)
@@ -57,27 +52,38 @@ def ratio(x0, x1):
     return x1/x0
 
 def integration_levels(filenames, level):
+    # set-up the 3D grid first
+    file = '/home/links/rm811/Isca/input/dimensions_3d.nc'
+    ds = xr.open_dataset(file, decode_times=False)
+    lat = ds.lat
+    coslat = np.cos(np.deg2rad(lat.data))
+    lon = ds.lon
+    p = ds.pfull
+
     n = len(filenames)
     int1 = []
     for i in range(n):
-       lat, lon, p, heat = open_heat_static(filenames[i])
-       int1.append(surf_integrate(heat, lon, p))
-       coslat = np.cos(np.deg2rad(lat.data))
+       heat_lon, heat = open_heat_static(filenames[i])
+       int1.append(surf_integrate(heat, heat_lon, p))
 
     int2 = []
     for i in range(n):
         int2.append(integral(int1[i], lon, 1))
 
     if level == 'lat': 
-        int = int2
+        finished = int2
     
     elif level == 'full':
         int3 = []
         for i in range(n):
-            int3.append(integral(int2[i], lat, 0))
-        int = int3
+            int3_sub = []
+            for j in range(len(int2[i])):
+                int3_sub.append((int2[i][j]*coslat[j]))
+            int3.append(np.sum(int3_sub)/np.sum(coslat))
+        finished = int3
+        print(finished)
 
-    return n, lat, int
+    return n, lat, finished
 
 def plot_vslat(filenames, labels, colors):
     n, lat, int = integration_levels(filenames, 'lat')
@@ -98,6 +104,7 @@ def plot_vsdefault(filenames, labels, colors):
     ratios = []
     for i in range(n):
         ratios.append(ratio(int[0], int[i]))
+    print(ratios)
     fig, ax = plt.subplots(figsize=(8,6))
     ax.bar(labels[1:], ratios[1:], color=colors[1:])
     ax.set_xticklabels(labels[1:], rotation=30, ha='right')
@@ -143,13 +150,9 @@ def plot_multiheat():
     return plt.close()
 
 folder = 'polar_heating'
-#filenames = ['w15a4p800f800g50', 'w15a4p600f800g50', 'w15a4p400f800g50', 'w25a4p800f800g50', 'w30a4p800f800g50', 'w15a2p800f800g50', 'w15a8p800f800g50', 'a4x75y180w5v30p800']
-#labels = ['default', r'$p_{top} = 600$ hPa', r'$p_{top} = 400$ hPa', r'$\phi_{w} = 25 \degree$', r'$\phi_{w} = 30 \degree$', r'$A = 2$ K day$^{-1}$', r'$A = 8$ K day$^{-1}$', 'off-pole']
-filenames = ['w15a4p800f800g50', 'a4x75y180w5v30p800', 'a4x75y180w5v30p400', 'a8x75y180w5v30p800', 'a4x75y180w15v30p800', 'a4x60y180w15v30p800', 'a11x75y180w5v45p800']
-labels = ['default pole-centered heat', 'default off-pole', r'$p_{top}=400$ hPa', r'$A=8$ K day$^{-1}$',\
-    r'$\phi_{w}=15\degree$', r'$\phi_0=60\degree$, $\phi_{w}=15\degree$', r'$A=11.5$ K day$^{-1}$, $\lambda_{w}=45\degree$']
+filenames = ['w15a4p800f800g50', 'w30a4p800f800g50_scaled'] #, 'w75a4g5f75o90p200', 'w15a2p800f800g50', 'w15a8p800f800g50', 'a4x75y180w5v30p800']
+labels = ['default', r'$\phi_{w} = 30\degree$'] #, r'$l_{th} = 5\degree$', r'$A = 2$ K day$^{-1}$', r'$A = 8$ K day$^{-1}$', 'off-pole']
 colors = ['k', '#B30000', '#FF9900', '#FFCC00', '#00B300', '#0099CC', '#4D0099', '#CC0080']
 
-data = plot_vslat(filenames, labels, colors)
+#plot_vslat(filenames, labels, colors)
 plot_vsdefault(filenames, labels, colors)
-#plot_multiheat()

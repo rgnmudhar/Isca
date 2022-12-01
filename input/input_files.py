@@ -6,6 +6,7 @@ import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
+from check_heat import *
 
 def set_up(type):
     if type == "2d":
@@ -18,11 +19,39 @@ def set_up(type):
         template = ds.data * 0. + 1.
     elif type == "ozone":
         ozone_file = '/home/links/rm811/Isca/input/rrtm_input_files/ozone_1990_notime.nc'
-        data = xr.open_dataset(ozone_file, decode_times=False)
-        template = data.ozone_1990 * 0. + 1.
+        ds = xr.open_dataset(ozone_file, decode_times=False)
+        template = ds.ozone_1990 * 0. + 1.
     return ds, template
 
-def ideal_topo(y_min=25., y_max=65, h_0=4000., m=2., save_output=True):
+def scaling(ds, filename, polar_heat_unscaled, th_mag, p_top, p_ref, p_th):
+    # scales strength of heating for different widths of heating vs. y_wid = 15 case
+    # requires there to already be a file with all the same parameters except y_wid = 15
+    print("scaling")
+    file0 = 'w15' + 'a' + str(int(th_mag)) + 'p' + str(int(p_top)) + 'f' + str(int(p_ref)) + 'g' + str(int(p_th))
+    filenames = [file0, filename]
+    lev = integration_levels(filenames, 'full')[2]
+    r = ratio(lev[0], lev[1])
+    polar_heat_scaled = polar_heat_unscaled / r
+
+    coord_list = ["pfull", "lat", "lon"]
+    polar_heat_scaled = xr.Dataset(
+        data_vars=dict(
+            polar_heat_scaled = (coord_list, polar_heat_scaled.transpose('pfull','lat','lon').values)
+        ),
+        coords=ds.coords
+    )
+        
+    polar_heat_scaled = polar_heat_scaled.rename({"polar_heat_scaled" : filename+'_scaled'})
+            
+    polar_heat_scaled.to_netcdf(path + 'polar_heating/' + filename+'_scaled' + '.nc', format="NETCDF3_CLASSIC",
+        encoding = {filename+'_scaled': {"dtype": 'float32', '_FillValue': None},
+                "lat": {'_FillValue': None}, "lon": {'_FillValue': None},
+                "latb": {'_FillValue': None}, "lonb": {'_FillValue': None},
+                "pfull": {'_FillValue': None}, "phalf": {'_FillValue': None}}
+        ) 
+    return filename
+
+def ideal_topo(y_min=25., y_max=65, h_0=6000., m=2., save_output=True):
     """
     Bottom topography in the NH specified by setting the surface geopotential height.
     Based on Sheshadri et al. (2015).
@@ -67,14 +96,13 @@ def ideal_topo(y_min=25., y_max=65, h_0=4000., m=2., save_output=True):
     
     return filename
 
-def polar_heating(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., save_output=True):
+def polar_heating(y_wid=30., th_mag=4., p_th = 50., p_top=800., p_ref=800., save_output=True):
     
     # Parameter sweep
     # 1. Vary p_top - depth of forcing: 0:200:800 (1000 would be no forcing!)
     # 2. Vary th_mag - magnitude of forcing in K/s when centred on 800hPa  (0.5,1.,1.5,2.) Could try negative values too
     # 3. Vary y_wid - decay of forcing away from pole (10., 15., 20.)
     # 4. Vary p_th - sets vertical gradient of forcing at cap (25.,50.,75.) Sensitivity check that steepness of transition doesn't cause unexpected behaviour
-    
     ds, template = set_up("ozone")
     
     # Vary with latitude in similar way to Orlanski and Solman 2010
@@ -85,21 +113,10 @@ def polar_heating(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., sa
     # p_ref can be varied to alter the total input, which I think will be (1000-p_ref) * cp/g * th_mag
     
     if p_top==0.:  # If the heating is going right to the model top then make heating uniform in height, scaled to fit p_ref level
-        polar_heat= th_mag * (1000. - p_ref)/1000. * heat_lat /86400.
+        polar_heat = th_mag * (1000. - p_ref)/1000. * heat_lat /86400.
     else:
         polar_heat = 0.5 * th_mag * (1000. - p_ref)/(1000. - p_top) * heat_lat * (1. + np.tanh((ds.pfull - p_top)/p_th)) /86400.
-
-    if int(y_wid) != 15:
-        # scales strength of heating for different widths of heating vs. y_wid = 15 case
-        # requires there to already be a file with all the same parameters except y_wid = 15
-        print("scaling")
-        file0 = 'w15' + 'a' + str(int(th_mag)) + 'p' + str(int(p_top)) + 'f' + str(int(p_ref)) + 'g' + str(int(p_th))
-        ds0 = xr.open_dataset(path + 'polar_heating/' + file0 + '.nc')
-        heat0 = heat1 = 0
-        for i in range(len(ds.lat)):
-            heat0 += ds0.variables[file0][-1,i,0].data
-            heat1 += polar_heat.transpose('pfull','lat','lon')[-1,i,0].data
-        polar_heat = polar_heat / (heat1/heat0)
+        polar_heat_unscaled = polar_heat # for scaling (if needed)
 
     coord_list = ["pfull", "lat", "lon"]
     polar_heat = xr.Dataset(
@@ -121,6 +138,9 @@ def polar_heating(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., sa
                     "latb": {'_FillValue': None}, "lonb": {'_FillValue': None},
                     "pfull": {'_FillValue': None}, "phalf": {'_FillValue': None}}
                 )    
+
+    if int(y_wid) != 15:
+        filename = scaling(ds, filename, polar_heat_unscaled, th_mag, p_top, p_ref, p_th)   
 
     return filename
 
