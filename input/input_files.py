@@ -49,7 +49,7 @@ def scaling(ds, filename, polar_heat_unscaled, th_mag, p_top, p_ref, p_th):
                 "latb": {'_FillValue': None}, "lonb": {'_FillValue': None},
                 "pfull": {'_FillValue': None}, "phalf": {'_FillValue': None}}
         ) 
-    return filename
+    return filename+'_scaled'
 
 def ideal_topo(y_min=25., y_max=65, h_0=6000., m=2., save_output=True):
     """
@@ -96,7 +96,7 @@ def ideal_topo(y_min=25., y_max=65, h_0=6000., m=2., save_output=True):
     
     return filename
 
-def polar_heating(y_wid=30., th_mag=4., p_th = 50., p_top=800., p_ref=800., save_output=True):
+def polar_heating(y_wid=15., th_mag=4., p_th = 50., p_top=800., p_ref=800., save_output=True):
     
     # Parameter sweep
     # 1. Vary p_top - depth of forcing: 0:200:800 (1000 would be no forcing!)

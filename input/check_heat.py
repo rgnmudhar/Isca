@@ -150,9 +150,9 @@ def plot_multiheat():
     return plt.close()
 
 folder = 'polar_heating'
-filenames = ['w15a4p800f800g50', 'w30a4p800f800g50_scaled'] #, 'w75a4g5f75o90p200', 'w15a2p800f800g50', 'w15a8p800f800g50', 'a4x75y180w5v30p800']
-labels = ['default', r'$\phi_{w} = 30\degree$'] #, r'$l_{th} = 5\degree$', r'$A = 2$ K day$^{-1}$', r'$A = 8$ K day$^{-1}$', 'off-pole']
+filenames = ['w15a4p800f800g50', 'w10a4p800f800g50_scaled', 'w20a4p800f800g50_scaled', 'w30a4p800f800g50_scaled', 'w15a4p600f800g50', 'w15a4p400f800g50']
+labels = ['default', r'$\phi_{w} = 10\degree$', r'$\phi_{w} = 20\degree$', r'$\phi_{w} = 30\degree$', r'$p_{top} = 600$ hPa', r'$p_{top} = 400$ hPa']
 colors = ['k', '#B30000', '#FF9900', '#FFCC00', '#00B300', '#0099CC', '#4D0099', '#CC0080']
 
-#plot_vslat(filenames, labels, colors)
+plot_vslat(filenames, labels, colors)
 plot_vsdefault(filenames, labels, colors)
