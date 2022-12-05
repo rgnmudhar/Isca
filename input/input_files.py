@@ -225,7 +225,7 @@ def combo_heat1(y_wid=30., th_mag=4., p_top = 800., p_th = 50., p_ref=800., q_0=
 
     return filename
 
-def offpole_heating(q_0=4., x_cen=75., y_cen=270., x_wid=5., y_wid=30., p_top = 800., p_th = 50., p_ref=800., save_output=True):
+def offpole_heating(q_0=4., x_cen=75., y_cen=0., x_wid=5., y_wid=30., p_top = 800., p_th = 50., p_ref=800., save_output=True):
     
     # Parameters
     # 1. q_0 - magnitude of forcing in K/day
@@ -261,9 +261,11 @@ def offpole_heating(q_0=4., x_cen=75., y_cen=270., x_wid=5., y_wid=30., p_top = 
 
     return filename
 
-def combo_heat2(q_0=4., x_cen=75., y_cen=180., x_wid=5., y_wid=30., p_top = 800., p_th = 50., p_ref=800., q_0_2=6., m=2., y_cen_2=45., p_0=800., p_t=200., save_output=True):
+def combo_heat2(q_0=4., x_cen=75., y_cen=0., x_wid=5., y_wid=30., p_top = 800., p_th = 50., p_ref=800., q_0_2=6., m=2., y_cen_2=45., p_0=800., p_t=200., save_output=True):
     
     ds, template = set_up("3d")
+    coord_list = ["pfull", "lat", "lon"]
+    coords = ds.coords
 
     # Start with polar heating
     # Parameters
@@ -282,8 +284,16 @@ def combo_heat2(q_0=4., x_cen=75., y_cen=180., x_wid=5., y_wid=30., p_top = 800.
     heat_p = 0.5 * (1. + np.tanh((ds.pfull - p_top)/p_th)) * template
 
     polar_heat = q_0 * (1000. - p_ref)/(1000. - p_top) * heat_lat * heat_lon *  heat_p /86400.  # convert to K/s
+    polar_heat_unscaled = polar_heat
 
-    # APPLY SCALING?
+    # NB filename should be 32 characters or less
+    filename = 'a' + str(int(q_0)) + 'x' + str(int(x_cen)) + 'y' + str(int(y_cen)) +\
+            'w' + str(int(x_wid)) + 'v' + str(int(y_wid)) + 'p' + str(int(p_top)) +\
+            '_q' + str(int(q_0_2)) + 'm' + str(int(m)) + 'y' + str(int(y_cen_2))
+    print(len(filename))
+    save_heat(polar_heat_unscaled, 'asymmetry/', filename, coord_list, coords)
+    filename = scaling(ds, 'asymmetry/', 'w15a4p800f800g50', filename, polar_heat_unscaled, coord_list, coords)
+    polar_heat = xr.open_dataset(path + 'asymmetry/' + filename + '.nc').variables[filename]
 
     # Now do zonally asymmetric heat perturbation
     # Parameters
@@ -301,30 +311,7 @@ def combo_heat2(q_0=4., x_cen=75., y_cen=180., x_wid=5., y_wid=30., p_top = 800.
     heat = heat.where(heat['pfull']<p_0, 0)
     heat = heat.where(heat['pfull']>p_t, 0)
 
-    combo_heat = polar_heat + heat
-
-    coord_list = ["pfull", "lat", "lon"]
-    combo_heat = xr.Dataset(
-         data_vars=dict(
-             combo_heat = (coord_list, combo_heat.transpose('pfull','lat','lon').values)
-         ),
-         coords=ds.coords
-    )
-
-    if save_output:
-        # NB filename should be 32 characters or less
-        filename = 'a' + str(int(q_0)) + 'x' + str(int(x_cen)) + 'y' + str(int(y_cen)) +\
-            'w' + str(int(x_wid)) + 'v' + str(int(y_wid)) + 'p' + str(int(p_top)) +\
-            '_' 'q' + str(int(q_0_2)) + 'm' + str(int(m)) + 'y' + str(int(y_cen_2)) #+ 'l' + str(int(p_0)) + 'u' + str(int(p_t))
-        print(len(filename))
-        combo_heat = combo_heat.rename({"combo_heat" : filename})
-        
-        combo_heat.to_netcdf(path + 'asymmetry/' + filename + '.nc', format="NETCDF3_CLASSIC",
-             encoding = {filename: {"dtype": 'float32', '_FillValue': None},
-                    "lat": {'_FillValue': None}, "lon": {'_FillValue': None},
-                    "latb": {'_FillValue': None}, "lonb": {'_FillValue': None},
-                    "pfull": {'_FillValue': None}, "phalf": {'_FillValue': None}}
-                )    
+    save_heat(polar_heat + heat, 'asymmetry/', filename, coord_list, coords)   
 
     return filename
 
@@ -334,11 +321,11 @@ def plot_vertical(folder, filename):
     ds = xr.open_dataset(file)
     if folder == 'polar_heating':
         h = int(filename.partition("a")[2][0])/86400
-        heat = ds.sel(lon=180, method='nearest').variables[filename] #.mean(dim='lon')
+        heat = ds.sel(lon=0, method='nearest').variables[filename] #.mean(dim='lon')
     elif folder == 'asymmetry':
-        h = max(int(filename.partition("q")[2][0])/86400, int(filename.partition("a")[2][0])/86400)
-        #h = int(filename.partition("a")[2][0])/86400 * 3
-        heat = ds.sel(lon=0, method='nearest').variables[filename]
+        #h = max(int(filename.partition("q")[2][0])/86400, int(filename.partition("a")[2][0])/86400)
+        h = int(filename.partition("a")[2][0])/86400 * 3
+        heat = ds.sel(lon=180, method='nearest').variables[filename]
     inc = 0.5e-5
 
     lat = ds.coords['lat'].data
@@ -395,8 +382,8 @@ def plot_horizontal2(folder, filename):
     if folder == 'polar_heating':
         h = int(filename.partition("a")[2][0])/86400 #int(filename.partition("a")[2][:2])/86400
     elif folder == 'asymmetry':
-        h = int(filename.partition("a")[2][0])/86400 * 3
         #h = max(int(filename.partition("q")[2][0])/86400, int(filename.partition("a")[2][0])/86400)
+        h = int(filename.partition("a")[2][0])/86400 * 3
     inc = 0.25e-5
 
     lat = ds.coords['lat'].data
