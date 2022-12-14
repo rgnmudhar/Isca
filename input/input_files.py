@@ -169,7 +169,7 @@ def heat_perturb(q_0=6, m=2, y_cen=45, p_0=800, p_t=200, save_output=True):
     
     return filename
 
-def combo_heat1(y_wid=30., th_mag=4., p_top = 800., p_th = 50., p_ref=800., q_0=6., m=2., y_cen=45., p_0=800., p_t=200., save_output=True):
+def combo_heat1(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., q_0=6., m=2., y_cen=45., p_0=800., p_t=200., save_output=True):
     
     ds, template = set_up("3d")
     coord_list = ["pfull", "lat", "lon"]
@@ -225,7 +225,7 @@ def combo_heat1(y_wid=30., th_mag=4., p_top = 800., p_th = 50., p_ref=800., q_0=
 
     return filename
 
-def offpole_heating(q_0=4., x_cen=75., y_cen=0., x_wid=5., y_wid=30., p_top = 800., p_th = 50., p_ref=800., save_output=True):
+def offpole_heating(q_0=4., x_cen=75., y_cen=90., x_wid=5., y_wid=30., p_top = 800., p_th = 50., p_ref=800., save_output=True):
     
     # Parameters
     # 1. q_0 - magnitude of forcing in K/day
@@ -261,7 +261,7 @@ def offpole_heating(q_0=4., x_cen=75., y_cen=0., x_wid=5., y_wid=30., p_top = 80
 
     return filename
 
-def combo_heat2(q_0=4., x_cen=75., y_cen=0., x_wid=5., y_wid=30., p_top = 800., p_th = 50., p_ref=800., q_0_2=6., m=2., y_cen_2=45., p_0=800., p_t=200., save_output=True):
+def combo_heat2(q_0=4., x_cen=75., y_cen=90., x_wid=5., y_wid=30., p_top = 800., p_th = 50., p_ref=800., q_0_2=6., m=2., y_cen_2=45., p_0=800., p_t=200., save_output=True):
     
     ds, template = set_up("3d")
     coord_list = ["pfull", "lat", "lon"]
@@ -324,9 +324,10 @@ def plot_vertical(folder, filename):
         heat = ds.sel(lon=0, method='nearest').variables[filename] #.mean(dim='lon')
     elif folder == 'asymmetry':
         #h = max(int(filename.partition("q")[2][0])/86400, int(filename.partition("a")[2][0])/86400)
-        h = int(filename.partition("a")[2][0])/86400 * 3
+        h = 8 / 86400
+        #h = int(filename.partition("a")[2][0])/86400 * 3
         heat = ds.sel(lon=180, method='nearest').variables[filename]
-    inc = 0.5e-5
+    inc = 0.25e-5
 
     lat = ds.coords['lat'].data
     p = ds.coords['pfull'].data 
@@ -357,7 +358,7 @@ def plot_horizontal1(folder, filename):
         h = int(filename.partition("a")[2][0])/86400
     elif folder == 'asymmetry':
         h = int(filename.partition("q")[2][0])/86400
-    inc = 0.5e-5
+    inc = 0.25e-5
 
     lat = ds.coords['lat'].data
     lon = ds.coords['lon'].data
@@ -383,7 +384,8 @@ def plot_horizontal2(folder, filename):
         h = int(filename.partition("a")[2][0])/86400 #int(filename.partition("a")[2][:2])/86400
     elif folder == 'asymmetry':
         #h = max(int(filename.partition("q")[2][0])/86400, int(filename.partition("a")[2][0])/86400)
-        h = int(filename.partition("a")[2][0])/86400 * 3
+        h = 8 / 86400
+        #h = int(filename.partition("a")[2][0])/86400 * 3
     inc = 0.25e-5
 
     lat = ds.coords['lat'].data
