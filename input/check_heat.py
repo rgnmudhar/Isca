@@ -4,7 +4,9 @@ Script that checks column integrated heat input of prescribed polar heating
 from glob import glob
 import numpy as np
 import xarray as xr
+import matplotlib as mpl
 import matplotlib.pyplot as plt
+import matplotlib.colors as cm
 import cartopy.crs as ccrs
 from scipy import integrate
 from aostools.constants import *
@@ -122,32 +124,40 @@ def plot_multiheat():
     basis = 'PK_e0v4z13_'
     perturb = 'q6m2y45l800u200'
     T_ctrl = xr.open_dataset('/disco/share/rm811/processed/'+basis+perturb+'_Ttz.nc', decode_times=False).temp[0]
-    heat_names = ['w15a4p800f800g50', 'w15a4p400f800g50', 'w30a4p800f800g50_s']
+    heat_names = ['w15a4p800f800g50', 'w15a4p400f800g50', 'w30a4p800f800g50_s', 'q6m2y45l800u200']
     heats = []
-    folder = 'polar_heating'
     for heat in heat_names:
         print(heat)
-        file = '/home/links/rm811/Isca/input/' + folder + '/' + heat + '.nc'
-        ds = xr.open_dataset(file)
-        heats.append(ds.mean('lon').variables[heat])
+        if heat == 'q6m2y45l800u200':
+            folder = 'asymmetry'
+            file = '/home/links/rm811/Isca/input/' + folder + '/' + heat + '.nc'
+            ds = xr.open_dataset(file)
+            heats.append(ds.sel(lon=180, method='nearest').variables[heat])
+        else:
+            folder = 'polar_heating'
+            file = '/home/links/rm811/Isca/input/' + folder + '/' + heat + '.nc'
+            ds = xr.open_dataset(file)
+            heats.append(ds.mean('lon').variables[heat])
+
 
     lat = ds.lat
     p = ds.pfull
-    h = 4/86400
-    inc1 = 0.25e-5
-    h_range1 = np.arange(0, h+inc1, inc1)
-    inc2 = 0.5e-5
-    h_range2 = np.arange(0, h+inc2, inc2)
+    h = 6/86400
+    inc1 = 0.5e-5
+    h_range1 = np.arange(inc1/2, h+inc1, inc1)
+    inc2 = 1e-5
+    h_range2 = np.arange(inc2/2, h+inc2, inc2)
 
     # Plot
-    plt.figure(figsize=(6.5,6))
-    plt.contour(lat, T_ctrl.pfull, T_ctrl, colors='gainsboro', levels=np.arange(160, 330, 10), linewidths=1)
+    plt.figure(figsize=(7.5,7))
+    plt.contour(T_ctrl.lat, T_ctrl.pfull, T_ctrl, colors='gainsboro', levels=np.arange(160, 330, 10), linewidths=1.5)
     cs = plt.contourf(lat, p, heats[0], cmap='Reds', levels=h_range1)
     cb = plt.colorbar(cs, location='right')
     cb.set_label(label=r'Heating (K s$^{-1}$)', size='xx-large')
     cb.ax.tick_params(labelsize='xx-large')
-    plt.contour(lat, p, heats[1], colors='#4D0099', levels=h_range2, linewidths=1.5, alpha=0.25)
-    plt.contour(lat, p, heats[2], colors='#4D0099', levels=h_range2, linewidths=1.5, alpha=0.25)
+    plt.contour(lat, p, heats[1], colors='g', levels=h_range1, linewidths=1.5, alpha=0.15)
+    plt.contour(lat, p, heats[2], colors='g', levels=h_range1, linewidths=1.5, alpha=0.15)
+    plt.contour(lat, p, heats[3], colors='#4D0099', levels=h_range2, linewidths=1.5, alpha=0.25)
     plt.xlim(0, max(lat))
     plt.xticks([0, 20, 40, 60, 80], ['0', '20', '40', '60', '80'])
     plt.xlabel(r'Latitude ($\degree$N)', fontsize='xx-large')
