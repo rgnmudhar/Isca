@@ -349,10 +349,6 @@ def combo_heat3(y_wid=15., th_mag=4., p_th = 50., p_top=600., p_ref=800., \
     coord_list = ["pfull", "lat", "lon"]
     coords = ds.coords
 
-    ds, template = set_up("3d")
-    coord_list = ["pfull", "lat", "lon"]
-    coords = ds.coords
-
     # Start with polar heating
     # Parameters
     # 1. p_top - depth of forcing: 0:200:800 (1000 would be no forcing!)
