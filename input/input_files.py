@@ -369,9 +369,10 @@ def combo_heat3(y_wid=15., th_mag=4., p_th = 50., p_top=600., p_ref=800., \
         polar_heat = 0.5 * th_mag * (1000. - p_ref)/(1000. - p_top) * heat_lat * (1. + np.tanh((ds.pfull - p_top)/p_th)) /86400.
     
     # NB filename should be 32 characters or less
-    filename = 'polar_UT_midlat_test'
+    filename = 'q' + str(int(q_0_2)) + 'm' + str(int(m)) + 'y' + str(int(y_cen)) + '_w' + str(int(y_wid)) + 'a' + str(int(th_mag)) + 'p' + str(int(p_top)) +\
+        '_t' + str(int(q_0_1)) + 'x' + str(int(x_cen)) + 'z' + str(int(p_cen))
+                
     print(len(filename))
-    save_heat(polar_heat, 'asymmetry/', filename, coord_list, coords)
 
     # Now do upper tropospheric equator heating
     # Parameters
