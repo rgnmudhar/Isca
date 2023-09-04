@@ -102,6 +102,9 @@ private
    real :: ml_depth=1               ! depth for heat capacity calculation
    real :: spinup_time=10800.     ! number of days to spin up heat capacity for - req. multiple of orbital_period
 
+   real :: A = 0., B = 0. ! Default to 0
+   character(len=256) :: P_opt = 'Option1' ! Default to Option 1
+
    real :: vtx_edge = 50.0, vtx_width = 10.0, vtx_gamma = 2.0, t_min = 100.0 ! Parameters for equilibrium_t_option='Polvani_Kushner': vortex location/size (deg), lapse rate and min T
    real :: z_ozone = 20.0 ! Height of stratospheric warming start (km)
    Logical :: strat_vtx = .true. ! i.e. default is to have a stratospheric vortex
@@ -122,6 +125,7 @@ private
                               u_wind_file, v_wind_file, equilibrium_t_option,&
                               equilibrium_t_file, p_trop, alpha, peri_time, smaxis, albedo, &
                               lapse, h_a, tau_s, orbital_period,         &
+			     A, B, P_opt, &
                               heat_capacity, ml_depth, spinup_time, stratosphere_t_option, P00, &
                               vtx_edge, vtx_width, vtx_gamma, t_min, z_ozone, strat_vtx, &
                               sponge_flag, sponge_pbottom, sponge_tau_days
@@ -599,6 +603,7 @@ real, intent(in),  dimension(:,:,:), optional :: mask
           real, dimension(size(t,1),size(t,2)) :: &
      sin_lat, cos_lat, sin_lat_2, cos_lat_2, t_star, cos_lat_4, &
      tstr, sigma, the, tfactr, rps, p_norm, sin_sublon_2, coszen, fracday, &
+     A_term, exp_term, B_term, P_term, jet_fix, &
      w_vtx, t_hs, z_vortex, z_offset, z_km, t_pk, t_summer, t_winter
 
        real, dimension(size(t,1),size(t,2),size(t,3)) :: tdamp
@@ -611,6 +616,19 @@ real, intent(in),  dimension(:,:,:), optional :: mask
        real    :: tcoeff, pref
 
 !-----------------------------------------------------------------------
+!------------control jet latitude---------------------------------------
+
+      A_term(:,:) = A * cos( 2 * ( lat(:,:) - (pi/4) ) )
+      exp_term(:,:) = exp( - ( ( lat(:,:) - ( 50. * pi/180 ) )**2 ) / ( 2 * ( 15. * pi/180 )**2 ) ) + exp( - ( ( lat(:,:) + ( 50. * pi/180 ) )**2 ) / ( 2 * ( 15. * pi/180 ) **2 ) )
+      B_term(:,:) = B * cos( 2 * ( lat(:,:) - (pi/4) ) ) * sin( 3 * ( lat(:,:) - (pi/3) ) ) * exp_term(:,:)
+      if(trim(P_opt) .eq. 'Option1') then
+         P_term(:,:) = sin( 4 * ( lat(:,:) - (pi/4) ) )
+      else if(trim(P_opt) .eq. 'Option2') then
+         P_term(:,:) = sin( ( 4 * lat(:,:) ) - (pi/4) )
+      endif
+      jet_fix(:,:) = A_term(:,:) * P_term(:,:) + B_term(:,:)
+
+!-----------------------------------------------------------------------
 !------------latitudinal constants--------------------------------------
 
       sin_lat  (:,:) = sin(lat(:,:))
@@ -619,7 +637,7 @@ real, intent(in),  dimension(:,:,:), optional :: mask
       cos_lat_2(:,:) = 1.0-sin_lat_2(:,:)
       cos_lat_4(:,:) = cos_lat_2(:,:)*cos_lat_2(:,:)
 
-      t_star(:,:) = t_zero - delh*sin_lat_2(:,:) - eps*sin_lat(:,:)
+      t_star(:,:) = t_zero - delh*sin_lat_2(:,:) - eps*sin_lat(:,:) - jet_fix(:,:)
       tstr  (:,:) = t_strat - eps*sin_lat(:,:)
 
       vtx_edge_r = vtx_edge * pi / 180.0 ! Convert vortex location deg > rad
