@@ -6,9 +6,9 @@ import time
 
 def main(base_dir, exp_name_list, end_file):
     start_time = time.time()
-    avg_or_daily_list = ['daily'] # changed for daily (otherwise 'monthly')
+    avg_or_daily_list = ['daily'] # for daily outputs (default 'monthly')
     #exp_name_list = [exp_name]
-    start_file = 1 # changed start and end no. of files
+    start_file = 1 # start from 1st file
     nfiles=(end_file-start_file)+1
 
     do_extra_averaging=False #If true, then 6hourly data is averaged into daily data using cdo
@@ -39,7 +39,7 @@ def main(base_dir, exp_name_list, end_file):
         plevs['6hourly']=' -p "1000 10000 25000 50000 85000 92500"'
         
         #plevs['daily']  =' -p "1000 10000 25000 50000 85000 92500"'
-        # Changed daily to be same as monthly:
+        # Daily set as same as monthly:
         plevs['daily']=' -p "1 3 6 10 16 25 39 60 90 133 192 273 384 532 726 978 1301 1710 2223 2856 3633 4573 5703 7049 8638 10501 12672 15186 18082 21403 25198 29521 34436 40014 46340 53516 61661 70918 81460 93499"' 
             
         var_names['monthly']='-a slp height'
@@ -111,6 +111,6 @@ def main(base_dir, exp_name_list, end_file):
     return print('execution time', time.time()-start_time)
 
 if __name__ == "__main__":
-    exp_name_list = ['PK_e0v1z18'] 
-    main('/disco/share/rm811/isca_data/', exp_name_list, 84) 
-    #main(str(sys.argv[1]), str(sys.argv[2]), int(sys.argv[3]))
+    heat = '_w15a4p600f800g50_q6m2y45l800u200'
+    exp_name_list = ['PK_e0v4z13_'+heat]
+    main('/disco/share/rm811/isca_data/', exp_name_list, 504)
