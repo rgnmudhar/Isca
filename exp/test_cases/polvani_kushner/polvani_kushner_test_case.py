@@ -3,7 +3,7 @@ import os
 from isca import DryCodeBase, DiagTable, Experiment, Namelist, GFDL_BASE
 
 NCORES = 16
-RESOLUTION = 'T42', 40  # T42 horizontal resolution, 25 levels in pressure - NOTE: changed from 25 to 40 pressure levels
+RESOLUTION = 'T42', 40  # T42 horizontal resolution, 40 levels in pressure
 
 # a CodeBase can be a directory on the computer,
 # useful for iterative development
@@ -24,16 +24,16 @@ cb.compile()  # compile the source code to working directory $GFDL_WORK/codebase
 # and output diagnostics
 
 # if using local heating from file:
-#inputpath1 = 'input/polar_heating/' # INCLUDE THIS FOR HEATING or 'input/asymmetry/'
-#inputfile1 = 'w15a4p600f800g50' # INCLUDE THIS FOR HEATING
+inputpath1 = 'input/asymmetry/' # INCLUDE THIS FOR HEATING or 'input/polar_heating/'
+inputfile1 = 'w15a4p600f800g50_q6m2y45l800u200' # INCLUDE THIS FOR HEATING
 #inputpath2 = 'input/asymmetry/'  # INCLUDE THIS FOR TOPOGRAPHY
 #inputfile2 = 'h4000m2l25u65' # INCLUDE THIS FOR TOPOGRAPHY
 
-exp_name = 'testJ50'#+'_'+inputfile1 # updated experiment name
+exp_name = 'PK_e0v4z13_'+inputfile1 # experiment name
 exp = Experiment(exp_name, codebase=cb)
 
-#exp.inputfiles = [os.path.join(GFDL_BASE,inputpath1+inputfile1+'.nc')] #,\ # INCLUDE THIS FOR HEATING
-#                    #os.path.join(GFDL_BASE,inputpath2+inputfile2+'.nc')] # INCLUDE THIS FOR EXTRA HEATING/TOPOGRAPHY
+exp.inputfiles = [os.path.join(GFDL_BASE,inputpath1+inputfile1+'.nc')] #,\ # INCLUDE THIS FOR HEATING
+                    #os.path.join(GFDL_BASE,inputpath2+inputfile2+'.nc')] # INCLUDE THIS FOR TOPOGRAPHY/EXTRA HEATING
 
 #Tell model how to write diagnostics
 diag = DiagTable()
@@ -48,14 +48,11 @@ diag.add_field('dynamics', 'bk') # required diagnostic field for plevel_interp
 diag.add_field('dynamics', 'pk') # required diagnostic field for plevel_interp
 diag.add_field('dynamics', 'ucomp', time_avg=True)
 diag.add_field('dynamics', 'vcomp', time_avg=True)
-diag.add_field('dynamics', 'omega', time_avg=True) # added diagnostic field for w
+diag.add_field('dynamics', 'omega', time_avg=True) # required diagnostic field vertical velocity for EP Flux
 diag.add_field('dynamics', 'temp', time_avg=True)
-#diag.add_field('dynamics', 'vor', time_avg=True)
-#diag.add_field('dynamics', 'div', time_avg=True)
-diag.add_field('dynamics', 'height', time_avg=True) # added diagnostic field for height
-
-diag.add_field('hs_forcing', 'teq', time_avg=True) # added diagnostic field as sanity check on Teq
-#diag.add_field('hs_forcing', 'local_heating', time_avg=True) # INCLUDE THIS FOR HEATING
+diag.add_field('hs_forcing', 'teq', time_avg=True) # diagnostic field to double check Teq
+diag.add_field('hs_forcing', 'local_heating', time_avg=True) # INCLUDE THIS FOR HEATING
+diag.add_field('dynamics', 'height', time_avg=True) # diagnostic field geopotential height
 
 exp.diag_table = diag
 
@@ -75,14 +72,14 @@ namelist = Namelist({
 
     'spectral_dynamics_nml': {
         'damping_order'           : 4,                      # default: 2
-        #'water_correction_limit'  : 200.e2,                 # default: 0 - NOTE: needs to be commented out???
-        'do_water_correction': False,                       # NOTE: added but is it necessary for P-K???
+        #'water_correction_limit'  : 200.e2,                 # default: 0
+        'do_water_correction': False,                       
         'reference_sea_level_press': 1.0e5,                  # default: 101325
-        'valid_range_t'           : [50., 800.],           # default: (100, 500) - NOTE: was changed to go from 50
+        'valid_range_t'           : [50., 800.],           # default: (100, 500) - NOTE: lower bound changed to 50
         'initial_sphum'           : 0.0,                  # default: 0
         'vert_coord_option'       : 'uneven_sigma',         # default: 'even_sigma'
-        'scale_heights': 11.0,                               # NOTE: was changed to be 11.0 from 6.0
-        'exponent': 3.0,                                    # NOTE: was changed to be 3.0 from 7.5
+        'scale_heights': 11.0,                               # NOTE: was changed to be 11.0, from 6.0
+        'exponent': 3.0,                                    # NOTE: was changed to be 3.0, from 7.5
         'surf_res': 0.5
     },
 
@@ -95,7 +92,7 @@ namelist = Namelist({
     'hs_forcing_nml': {
         't_zero': 315.,    # temperature at reference pressure at equator (default 315K)
         't_strat': 216.65,   # stratosphere temperature (default 200K) - NOTE: was changed to 216.65 consistent with US standard T at 20km
-        'delh': 60.,       # equator-pole temp gradient (default 60K) - NOTE: was changed to range from 20 - 100
+        'delh': 60.,       # equator-pole temp gradient (default 60K)
         'delv': 10.,       # lapse rate (default 10K)
         'sigma_b': 0.7,    # boundary layer friction height (default p/ps = sigma = 0.7)
 
@@ -105,22 +102,22 @@ namelist = Namelist({
         'kf':   -1.,       # BL momentum frictional timescale (default 1 days)
 
         # to control jet latitude, following Garfinkel et al. (2013)
-        'A': 5., # takes values 0, ±5, ±10
-        'B': 20., # takes values 0 to 20 in 4s
+        'A': 0., # takes values 0, ±5, ±10
+        'B': 0., # takes values 0 to 20 in multiples of 4
         'P_opt': 'Option1', # Option 1 or 2 depending on jet location requirement
 
         # to have a stratosphere, following Polvani & Kushner (2002)
-        'eps': 0.,         # stratospheric latitudinal variation (default 0K) - NOTE: ±10 in P-K paper
-        'vtx_gamma': 0.0, # experiment with different values of gamma
-        'equilibrium_t_option': 'Polvani_Kushner', # add new option for polvani_kushner relaxation
-        'strat_vtx': False, # default is True - set to False so that w_vtx=0 for no polar vortex
-        'z_ozone': 13.,     # added height of stratospheric heating source
+        'equilibrium_t_option': 'Polvani_Kushner',
+        'strat_vtx': True, # default True - set to False to set w_vtx=0 for no polar vortex
+        'eps': 0.,         # stratospheric latitudinal variation (default 0K) - NOTE: ±10 in PK paper
+        'vtx_gamma': 4.0, # lapse rate of winter stratospheric cooling (default 4 K/km)
+        'z_ozone': 13.,     # height of stratospheric heating source
         'do_conserve_energy':   True,  # convert dissipated momentum into heat (default True)
-        'sponge_flag': True #,      # added sponge layer for simple damping in upper levels
+        'sponge_flag': True,      # sponge layer for simple damping in upper levels
 
         # variables for including heating
-        #'local_heating_option': 'from_file', # INCLUDE THIS FOR HEATING
-        #'local_heating_file': inputfile1 # INCLUDE THIS FOR HEATING
+        'local_heating_option': 'from_file', # INCLUDE THIS FOR HEATING
+        'local_heating_file': inputfile1 # INCLUDE THIS FOR HEATING
     },
 
     'diag_manager_nml': {
@@ -143,6 +140,5 @@ exp.set_resolution(*RESOLUTION)
 #Let's do a run!
 if __name__ == '__main__':
     exp.run(1, num_cores=NCORES, use_restart=False)
-    #exp.run(1, num_cores=NCORES, restart_file='/disco/share/rm811/isca_data/'+exp_name+'/restarts/res0504.tar.gz', use_restart=True)
-    for i in range(2, 145): #504 + 1 for ~42y worth or 144 + 1 for ~10y worth (both inc. 2y of spin-up) 
+    for i in range(2, 505): #504 + 1 months for ~42y worth - NOTE: discard first 2y as spin-up
         exp.run(i, num_cores=NCORES)  # use the restart i-1 by default
