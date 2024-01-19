@@ -29,6 +29,16 @@ def open_heat_evolution(filename):
     heat = ds.local_heating
     return t, heat
 
+def open_heat_static_perturb(folder, filename):
+    # select a slice of the wave-2 heating perturbation centred on 180 degreesE, ±45 degrees
+    file = '/home/links/rm811/Isca/input/' + folder + '/' + filename + '.nc'
+    ds = xr.open_dataset(file)
+    lat = ds.lat
+    lon = ds.lon.sel(lon=slice(180-45, 180+45))
+    p = ds.pfull
+    heat = ds.sel(lon=slice(180-45, 180+45)).variables[filename]
+    return  p, lat, lon, heat
+
 def diff(heat, var):
     return heat.differentiate(var, edge_order=2)
 
@@ -54,6 +64,13 @@ def surf_integrate(heat, lon, p):
 
 def ratio(x0, x1):
     return x1/x0
+
+def integrate_lat(input, coslat):
+    int_final = 0
+    for j in range(len(input)): #in latitude
+        int_final += (input[j]*coslat[j])
+    int_final = int_final/np.sum(coslat)
+    return int_final
 
 def integration_levels(folders, filenames, level):
     # set-up the 3D grid first
@@ -168,11 +185,29 @@ def plot_multiheat():
     plt.savefig('heatings.pdf', bbox_inches = 'tight')
     return plt.close()
 
-folders = ['polar_heating', 'polar_heating', 'polar_heating', 'asymmetry', 'polar_heating']
-filenames = ['w15a4p800f800g50', 'w30a4p800f800g50_scaled', 'w15a4p400f800g50', 'a4x75y180w5v30p800_s', 'w15a8p800f800g50']
-labels = ['default', r'$\phi_{w} = 30\degree$', r'$p_{top} = 400$ hPa', 'off-pole', r'$A = 8$ K day$^{-1}$']
-colors = ['k', '#B30000', '#FF9900', '#FFCC00', '#00B300', '#0099CC', '#4D0099', '#CC0080']
+def calc_heat_input_perturb(exp_og, exp_toscale):
+    folder = 'asymmetry'
+    exp = [exp_og, exp_toscale]
+    inputs = [] 
+    for e in exp:
+        #print('Finding heat input for: ', e)
+        p_heat, lat_heat, lon_heat, heat = open_heat_static_perturb(folder, e)
+        coslat = np.cos(np.deg2rad(lat_heat)).data
+        #Now integrate...
+        int_lon = integral(heat, lon_heat, 2) #in longitude
+        int_p = integral(int_lon, p_heat, 0) #in pressure
+        int_full = integrate_lat(int_p, coslat)
+        #print(e, ' total heat input: ', int_full)
+        inputs.append(int_full)
+    return inputs[0] / inputs[1]
 
-#plot_vslat(folders, filenames, labels, colors)
-#plot_vsdefault(folders, filenames, labels, colors)
-plot_multiheat()
+if __name__ == '__main__': 
+    folders = ['polar_heating', 'polar_heating', 'polar_heating', 'asymmetry', 'polar_heating']
+    filenames = ['w15a4p800f800g50', 'w30a4p800f800g50_scaled', 'w15a4p400f800g50', 'a4x75y180w5v30p800_s', 'w15a8p800f800g50']
+    labels = ['default', r'$\phi_{w} = 30\degree$', r'$p_{top} = 400$ hPa', 'off-pole', r'$A = 8$ K day$^{-1}$']
+    colors = ['k', '#B30000', '#FF9900', '#FFCC00', '#00B300', '#0099CC', '#4D0099', '#CC0080']
+
+    #plot_vslat(folders, filenames, labels, colors)
+    plot_vslat(['asymmetry'], ['q6m2y45l800u200'], ['asymmetry'], colors)
+    #plot_vsdefault(folders, filenames, labels, colors)
+    #plot_multiheat()

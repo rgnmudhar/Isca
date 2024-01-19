@@ -23,7 +23,7 @@ def set_up(type):
         template = ds.ozone_1990 * 0. + 1.
     return ds, template
 
-def scaling(ds, folder, file0, filename, polar_heat_unscaled, coord_list, coords):
+def scaling_polar(ds, folder, file0, filename, polar_heat_unscaled, coord_list, coords):
     # scales strength of heating for different widths of heating vs. y_wid = 15 case
     # requires there to already be a file with all the same parameters except y_wid = 15
     print("scaling")
@@ -34,6 +34,18 @@ def scaling(ds, folder, file0, filename, polar_heat_unscaled, coord_list, coords
 
     filename = filename+'_s'
     save_heat(polar_heat_scaled, folder, filename, coord_list, coords)
+
+    return filename
+
+def scaling_perturb(ds, folder, file0, filename, heat_unscaled, coord_list, coords):
+    # scales strength of heating for different depths of heating vs. p_t = 200 case
+    # requires there to already be a file with all the same parameters except p_t = 200
+    print("scaling")
+    r = calc_heat_input_perturb(file0, filename)
+    heat_scaled = heat_unscaled * r
+
+    filename = filename+'_s'
+    save_heat(heat_scaled, folder, filename, coord_list, coords)
 
     return filename
 
@@ -132,7 +144,7 @@ def polar_heating(y_wid=15., th_mag=4., p_th = 50., p_top=600., p_ref=800., save
 
 
     if int(y_wid) != 15:
-        filename = scaling(ds, 'polar_heating/', 'w15' + filename[3:], filename, polar_heat_unscaled, coord_list, coords)   
+        filename = scaling_polar(ds, 'polar_heating/', 'w15' + filename[3:], filename, polar_heat_unscaled, coord_list, coords)   
 
     return filename
 
@@ -159,17 +171,21 @@ def heat_perturb(q_0=6, m=2, y_cen=45, p_0=800, p_t=200, save_output=True):
     heat = q_0 * heat_lat * heat_lon *  heat_p /86400.  # convert to K/s
     heat = heat.where(heat['pfull']<p_0, 0)
     heat = heat.where(heat['pfull']>p_t, 0)
+    heat_unscaled = heat # for scaling (if needed)
 
-   
+    # NB filename should be 32 characters or less
+    filename = 'q' + str(int(q_0)) + 'm' + str(int(m)) + 'y' + str(int(y_cen)) + 'l' + str(int(p_0)) + 'u' + str(int(p_t))
+    print(len(filename))
+
     if save_output:
-        # NB filename should be 32 characters or less
-        filename = 'q' + str(int(q_0)) + 'm' + str(int(m)) + 'y' + str(int(y_cen)) + 'l' + str(int(p_0)) + 'u' + str(int(p_t))
-        print(len(filename))
         save_heat(heat, 'asymmetry/', filename, coord_list, coords)
+
+    if int(p_t) != 200:
+        filename = scaling_perturb(ds, 'asymmetry/', filename[:-3] + '200', filename, heat_unscaled, coord_list, coords)
     
     return filename
 
-def combo_heat1(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., q_0=6., m=2., y_cen=45., p_0=800., p_t=200., save_output=True):
+def combo_heat1(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., q_0=6., m=2., y_cen=45., p_0=800., p_t=300., save_output=True):
     
     ds, template = set_up("3d")
     coord_list = ["pfull", "lat", "lon"]
@@ -196,14 +212,12 @@ def combo_heat1(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., q_0=
         polar_heat_unscaled = polar_heat # for scaling (if needed)
     
     # NB filename should be 32 characters or less
-    filename = 'w' + str(int(y_wid)) + 'a' + str(int(th_mag)) + 'p' + str(int(p_top)) + 'f' + str(int(p_ref)) + 'g' + str(int(p_th)) +\
-                '_q' + str(int(q_0)) + 'm' + str(int(m)) + 'y' + str(int(y_cen))
-    print(len(filename))
-    save_heat(polar_heat_unscaled, 'asymmetry/', filename, coord_list, coords)
+    filename1 = 'w' + str(int(y_wid)) + 'a' + str(int(th_mag)) + 'p' + str(int(p_top)) + 'f' + str(int(p_ref)) + 'g' + str(int(p_th))
+    save_heat(polar_heat_unscaled, 'polar_heating/', filename1, coord_list, coords)
 
     if int(y_wid) != 15:
-        filename = scaling(ds, 'asymmetry/', 'w15' + filename[3:], filename, polar_heat_unscaled, coord_list, coords)
-        polar_heat = xr.open_dataset(path + 'asymmetry/' + filename + '.nc').variables[filename]
+        filename = scaling_polar(ds, 'polar_heating/', 'w15' + filename1[3:], filename1, polar_heat_unscaled, coord_list, coords)
+        polar_heat = xr.open_dataset(path + 'polar_heating/' + filename1 + '.nc').variables[filename1]
 
     # Now do zonally asymmetric heat perturbation
     # Parameters
@@ -220,6 +234,22 @@ def combo_heat1(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., q_0=
     heat = q_0 * heat_lat * heat_lon *  heat_p /86400.  # convert to K/s
     heat = heat.where(heat['pfull']<p_0, 0)
     heat = heat.where(heat['pfull']>p_t, 0)
+    heat_unscaled = heat # for scaling (if needed)
+
+    # NB filename should be 32 characters or less
+    filename2 = 'q' + str(int(q_0)) + 'm' + str(int(m)) + 'y' + str(int(y_cen)) + 'l' + str(int(p_0)) + 'u' + str(int(p_t))
+
+    if save_output:
+        save_heat(heat, 'asymmetry/', filename2, coord_list, coords)
+        # NB filename should be 32 characters or less
+        filename = filename1 + '_' + filename2[:-10]
+    if int(p_t) != 200:
+        # scale relative to p_t = 200 hPa case
+        filename2 = scaling_perturb(ds, 'asymmetry/', filename2[:-3] + '200', filename2, heat_unscaled, coord_list, coords)
+        heat = xr.open_dataset(path + 'asymmetry/' + filename2 + '.nc').variables[filename2]
+        # NB filename should be 32 characters or less
+        filename = filename1 + '_' + filename2[:-10]+'u'+str(int(p_t))+'_s'
+    print(len(filename))
 
     save_heat(polar_heat + heat, 'asymmetry/', filename, coord_list, coords)  
 
@@ -256,7 +286,7 @@ def offpole_heating(q_0=4., x_cen=45., y_cen=180., x_wid=5., y_wid=15., p_top = 
         print(len(filename))
         save_heat(heat, 'asymmetry/', filename, coord_list, coords)
 
-    filename = scaling(ds, 'asymmetry/', 'w15a4p800f800g50', filename, heat_unscaled, coord_list, coords)
+    filename = scaling_polar(ds, 'asymmetry/', 'w15a4p800f800g50', filename, heat_unscaled, coord_list, coords)
     print(filename)
 
     return filename
@@ -292,7 +322,7 @@ def combo_heat2(q_0=4., x_cen=45., y_cen=180., x_wid=5., y_wid=15., p_top = 800.
             '_q' + str(int(q_0_2)) + 'm' + str(int(m)) + 'y' + str(int(y_cen_2))
     print(len(filename))
     save_heat(polar_heat_unscaled, 'asymmetry/', filename, coord_list, coords)
-    filename = scaling(ds, 'asymmetry/', 'w15a4p800f800g50', filename, polar_heat_unscaled, coord_list, coords)
+    filename = scaling_polar(ds, 'asymmetry/', 'w15a4p800f800g50', filename, polar_heat_unscaled, coord_list, coords)
     polar_heat = xr.open_dataset(path + 'asymmetry/' + filename + '.nc').variables[filename]
 
     # Now do zonally asymmetric heat perturbation
@@ -483,7 +513,7 @@ def plot_horizontal2(folder, filename):
 
     lat = ds.coords['lat'].data
     lon = ds.coords['lon'].data
-    heat_surf = ds.sel(pfull=1000, method='nearest').variables[filename]
+    heat_surf = ds.sel(pfull=500, method='nearest').variables[filename]
     #heat_upper = ds.sel(pfull=400, method='nearest').variables[filename]
 
     #Plot
@@ -509,14 +539,14 @@ if __name__ == '__main__':
 
     H = 8
     p0 = 1000
-    path = '/home/links/rm811/Isca/input/'
+    path = '/emmy-noether/home/rm811/Isca/input/' #'/home/rm811/Isca/input/'
 
     if option =='a':
         filename = polar_heating()
         plot_vertical('polar_heating', filename)
     elif option =='b':
         filename = heat_perturb()
-        plot_horizontal1('asymmetry', filename)
+        plot_horizontal2('asymmetry', filename)
         plot_vertical('asymmetry', filename)
     elif option =='c':
         filename = ideal_topo()
