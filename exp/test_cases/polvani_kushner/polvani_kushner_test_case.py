@@ -25,7 +25,7 @@ cb.compile()  # compile the source code to working directory $GFDL_WORK/codebase
 
 # if using local heating from file:
 inputpath1 = 'input/asymmetry/' # INCLUDE THIS FOR HEATING or 'input/polar_heating/'
-inputfile1 = 'w15a4p600f800g50_q6m2y45l800u200' # INCLUDE THIS FOR HEATING
+inputfile1 = 'w15a4p600f800g50_q6m2y45u300_s' # INCLUDE THIS FOR HEATING
 #inputpath2 = 'input/asymmetry/'  # INCLUDE THIS FOR TOPOGRAPHY
 #inputfile2 = 'h4000m2l25u65' # INCLUDE THIS FOR TOPOGRAPHY
 
@@ -60,7 +60,7 @@ exp.diag_table = diag
 # wrapped as a namelist object.
 namelist = Namelist({
     'main_nml': {
-        'dt_atmos': 600, # timestep in seconds - default: 600. Should divide into seconds per day.
+        'dt_atmos': 480, # timestep in seconds - default: 600. Should divide into seconds per day.
         'days': 30, 
         'calendar': 'thirty_day',
         'current_date': [2000,1,1,0,0,0]
