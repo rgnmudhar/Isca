@@ -4,7 +4,7 @@ import sys
 import os
 import time
 
-def main(base_dir, exp_name_list, end_file):
+def main(base_dir, exp_name_list, end_file, levels):
     start_time = time.time()
     avg_or_daily_list = ['daily'] # for daily outputs (default 'monthly')
     #exp_name_list = [exp_name]
@@ -40,7 +40,12 @@ def main(base_dir, exp_name_list, end_file):
         
         #plevs['daily']  =' -p "1000 10000 25000 50000 85000 92500"'
         # Daily set as same as monthly:
-        plevs['daily']=' -p "1 3 6 10 16 25 39 60 90 133 192 273 384 532 726 978 1301 1710 2223 2856 3633 4573 5703 7049 8638 10501 12672 15186 18082 21403 25198 29521 34436 40014 46340 53516 61661 70918 81460 93499"' 
+        if levels == 40:
+            # For 40 levels:
+            plevs['daily']=' -p "1 3 6 10 16 25 39 60 90 133 192 273 384 532 726 978 1301 1710 2223 2856 3633 4573 5703 7049 8638 10501 12672 15186 18082 21403 25198 29521 34436 40014 46340 53516 61661 70918 81460 93499"' 
+        elif levels == 60:
+            # For 60 levels:
+            plevs['daily']=' -p "0 2 4 5 8 11 15 20 27 36 49 64 84 109 140 180 228 288 362 451 558 687 841 1023 1238 1490 1784 2124 2518 2969 3486 4074 4740 5492 6338 7286 8344 9522 10828 12274 13869 15625 17554 19668 21982 24509 27267 30273 33546 37107 40982 45195 49776 54760 60183 66088 72522 79540 87204 95585"' 
             
         var_names['monthly']='-a slp height'
         var_names['pentad']='-a slp height'    
@@ -111,6 +116,5 @@ def main(base_dir, exp_name_list, end_file):
     return print('execution time', time.time()-start_time)
 
 if __name__ == "__main__":
-    heat = '_w15a4p600f800g50_q6m2y45l800u200'
-    exp_name_list = ['PK_e0v4z13_'+heat]
-    main('/disco/share/rm811/isca_data/', exp_name_list, 504)
+    exp_name_list = ['PK_e0v4z13_w15a4p300f800g50_q6m2y45l800u200_L60']
+    main('/disco/share/rm811/isca_data/', exp_name_list, 504, 60) # specifiy no. of levels as last argument - all in exp_name_list must have some no. of levels!

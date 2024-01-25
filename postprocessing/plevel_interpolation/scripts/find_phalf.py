@@ -20,7 +20,11 @@ for i in phalfs_list:
 
 # The following converts Isca-output sigma levels to pressure levels to interpolate to
 import xarray as xr
-ds = xr.open_dataset('/home/links/rm811/scratch/isca_data/PK_eps0_vtx2_zoz18_1y_heat_test/run0012/atmos_monthly.nc', decode_times=False)
+from glob import glob
+indir = '/disco/share/rm811/isca_data/'
+exp = 'PK_e0v4z13_w15a4p300f800g50_q6m2y45l800u200_L60'
+file = glob(indir+exp+'/run0025/*.nc')[0]
+ds = xr.open_dataset(file, decode_times=False)
 
 p = ds.pfull.data
 ph = ds.phalf.data
@@ -29,10 +33,10 @@ phalf = ""
 
 for i in p:
     pfull += str(int(i * 100)) + " "
-
+print("pfull:")
 print(pfull)
 
 for i in ph:
     phalf += str(int(i * 100)) + " "
-
+print("phalf:")
 print(phalf)
