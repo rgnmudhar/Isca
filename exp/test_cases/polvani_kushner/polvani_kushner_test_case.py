@@ -2,8 +2,8 @@ import numpy as np
 import os
 from isca import DryCodeBase, DiagTable, Experiment, Namelist, GFDL_BASE
 
-NCORES = 16
-RESOLUTION = 'T42', 40  # T42 horizontal resolution, 40 levels in pressure
+NCORES = 16 # 16 cores is default
+RESOLUTION = 'T42', 60  # T42 horizontal resolution, 40 levels in pressure is default
 
 # a CodeBase can be a directory on the computer,
 # useful for iterative development
@@ -25,11 +25,11 @@ cb.compile()  # compile the source code to working directory $GFDL_WORK/codebase
 
 # if using local heating from file:
 inputpath1 = 'input/asymmetry/' # INCLUDE THIS FOR HEATING or 'input/polar_heating/'
-inputfile1 = 'w15a4p600f800g50_q6m2y45u300_s' # INCLUDE THIS FOR HEATING
+inputfile1 = 'q6m2y45l800u200' # INCLUDE THIS FOR HEATING
 #inputpath2 = 'input/asymmetry/'  # INCLUDE THIS FOR TOPOGRAPHY
 #inputfile2 = 'h4000m2l25u65' # INCLUDE THIS FOR TOPOGRAPHY
 
-exp_name = 'PK_e0v4z13_'+inputfile1 # experiment name
+exp_name = 'PK_e0v4z13_'+inputfile1+'_L60' # experiment name
 exp = Experiment(exp_name, codebase=cb)
 
 exp.inputfiles = [os.path.join(GFDL_BASE,inputpath1+inputfile1+'.nc')] #,\ # INCLUDE THIS FOR HEATING
@@ -60,7 +60,7 @@ exp.diag_table = diag
 # wrapped as a namelist object.
 namelist = Namelist({
     'main_nml': {
-        'dt_atmos': 480, # timestep in seconds - default: 600. Should divide into seconds per day.
+        'dt_atmos': 240, # timestep in seconds - default: 600. Should divide into seconds per day.
         'days': 30, 
         'calendar': 'thirty_day',
         'current_date': [2000,1,1,0,0,0]
