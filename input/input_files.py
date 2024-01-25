@@ -185,7 +185,7 @@ def heat_perturb(q_0=6, m=2, y_cen=45, p_0=800, p_t=200, save_output=True):
     
     return filename
 
-def combo_heat1(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., q_0=6., m=2., y_cen=45., p_0=800., p_t=300., save_output=True):
+def combo_heat1(y_wid=15., th_mag=4., p_top = 600., p_th = 50., p_ref=800., q_0=6., m=2., y_cen=45., p_0=800., p_t=200., save_output=True):
     
     ds, template = set_up("3d")
     coord_list = ["pfull", "lat", "lon"]
@@ -242,7 +242,7 @@ def combo_heat1(y_wid=15., th_mag=4., p_top = 800., p_th = 50., p_ref=800., q_0=
     if save_output:
         save_heat(heat, 'asymmetry/', filename2, coord_list, coords)
         # NB filename should be 32 characters or less
-        filename = filename1 + '_' + filename2[:-10]
+        filename = filename1 + '_' + filename2
     if int(p_t) != 200:
         # scale relative to p_t = 200 hPa case
         filename2 = scaling_perturb(ds, 'asymmetry/', filename2[:-3] + '200', filename2, heat_unscaled, coord_list, coords)
@@ -539,7 +539,7 @@ if __name__ == '__main__':
 
     H = 8
     p0 = 1000
-    path = '/emmy-noether/home/rm811/Isca/input/' #'/home/rm811/Isca/input/'
+    path = '/home/links/rm811/Isca/input/' #'/emmy-noether/home/rm811/Isca/input/'
 
     if option =='a':
         filename = polar_heating()
