@@ -116,5 +116,5 @@ def main(base_dir, exp_name_list, end_file, levels):
     return print('execution time', time.time()-start_time)
 
 if __name__ == "__main__":
-    exp_name_list = ['PK_e0v4z13_w15a4p300f800g50_q6m2y45l800u200_L60']
-    main('/disco/share/rm811/isca_data/', exp_name_list, 504, 60) # specifiy no. of levels as last argument - all in exp_name_list must have some no. of levels!
+    exp_name_list = ['PK_e0v4z13_w15a4p300f800g50_q6m2y45l800u200_T85']
+    main('/disco/share/rm811/isca_data/', exp_name_list, 504, 40) # specifiy no. of levels as last argument - all in exp_name_list must have some no. of levels!
